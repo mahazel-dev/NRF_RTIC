@@ -29,6 +29,8 @@ mod app {
     #[shared]
     struct SharedResources {
         gpiote: Gpiote,
+        #[lock_free]
+        counter_blink: u16,
     }
 
     #[init]
@@ -43,28 +45,38 @@ mod app {
         //rtt_target::rprintln!("dupa");
 
         ( 
-            SharedResources { gpiote: gpiote }, 
+            SharedResources { gpiote: gpiote,
+            counter_blink: 0 }, 
             LocalResources {led: led}, 
             init::Monotonics()
         )
     }
 
-    #[task(local = [led])]
+    #[task(local = [led],
+        shared = [counter_blink])]
     fn task1(cx: task1::Context)   {
         cx.local.led.toggle();
+        //let value = cx.shared.counter_blink.ta
+        rprintln!("LED toggled {}", cx.shared.counter_blink);
     }
 
 
-    #[task(binds = GPIOTE, shared = [gpiote])]
+    #[task(binds = GPIOTE,
+        shared = [gpiote, counter_blink])]
     fn inter(mut cx: inter::Context)    {
         cx.shared.gpiote.lock(|gpiote|  {
-            task1::spawn().unwrap();
-            rprintln!("Entered interrupt");
             gpiote.reset_events();
+            
+            task1::spawn().unwrap();
+            *cx.shared.counter_blink += 1;
+            rprintln!("Entered interrupt {}' time", cx.shared.counter_blink);
+            /*
+            cx.shared.counter_blink.lock(|counter_blink| {
+                *counter_blink += 1;
+            });
+            */
         });
     }
-
-
 
 
 }
