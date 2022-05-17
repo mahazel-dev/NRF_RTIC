@@ -1,21 +1,21 @@
 #![no_std]
 
+use hal::timer::OneShot;
 use nrf52840_hal as hal;
 
 pub use hal::{gpio, gpio::*, gpiote, gpiote::*,
-    timer::OneShot, Timer,
-    clocks, Clocks};
+    clocks, Clocks,
+    Timer};
 
-use hal::prelude::{_embedded_hal_blocking_delay_DelayMs,
-    _embedded_hal_blocking_delay_DelayUs};
+pub use hal::pac::{interrupt, Interrupt, NVIC_PRIO_BITS, 
+    TIMER0};
 
-pub use hal::pac::{interrupt, Interrupt, NVIC_PRIO_BITS};
-
-    
 use embedded_hal::digital::v2::
     {OutputPin as _, InputPin as _,
         StatefulOutputPin};
 
+use hal::prelude::{_embedded_hal_blocking_delay_DelayMs,
+        _embedded_hal_blocking_delay_DelayUs};
 
 //pub use hal::ieee802154;
 
@@ -55,8 +55,8 @@ pub fn init_board()   -> Result<Device, ()>   {
         gpiote.port().input_pin(&button_4).low();
         gpiote.port().enable_interrupt();
 
-        // Timers
-        let timer = hal::Timer::new(periph.TIMER0); 
+        // Blocker
+        let blocker = hal::Timer::one_shot(periph.TIMER0); 
         
         Ok(Device {
             leds: Leds  {
@@ -73,8 +73,8 @@ pub fn init_board()   -> Result<Device, ()>   {
                 _4: Button { inner: button_4 },
             },
 
-            blocking_timer: BlockingDelay   {
-                inner: timer,
+            blocking_timer: ButtonBlocker   {
+                inner: blocker,
             },
 
             gpiote: gpiote,
@@ -85,18 +85,16 @@ pub fn init_board()   -> Result<Device, ()>   {
     }
 }
 
-
 pub struct Device   {
     /// Add LEDs to my board
     pub leds: Leds,
     /// Add Buttons to my board
     pub buttons: Buttons,
     /// Add timer for general delay
-    pub blocking_timer: BlockingDelay,
+    pub blocking_timer: ButtonBlocker,
     // Add GPIOTE feature
     pub gpiote: Gpiote,
 }
-
 
 
 pub struct Leds {
@@ -184,7 +182,6 @@ pub struct Button   {
     pub inner: Pin<Input<PullUp>>
 }
 
-
 impl Button {
     pub fn is_pushed(&self) -> bool   {
         self.inner.is_high() != Ok(true)
@@ -192,16 +189,14 @@ impl Button {
 }
 
 
-pub struct BlockingDelay {
-    pub inner: Timer<hal::pac::TIMER0, OneShot>
-}
-pub enum TimeDuration  {
-    Micro(u16),
-    Mili(u16),
-    Sec(u8),
+// Lets try to implement start later
+pub struct ButtonBlocker {
+    pub inner: hal::Timer<TIMER0, OneShot>
 }
 
-impl BlockingDelay  {
+
+
+impl ButtonBlocker  {
     pub fn wait(&mut self, duration: TimeDuration)   {
         //defmt::trace!("blocking for {:?} ...", duration);
 
@@ -214,4 +209,10 @@ impl BlockingDelay  {
             },
         };
     }
+}
+
+pub enum TimeDuration {
+    Micro(u32),
+    Mili(u32),
+    Sec(u16),
 }

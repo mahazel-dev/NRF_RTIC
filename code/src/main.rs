@@ -4,26 +4,22 @@
 use rtic::app;
 use panic_rtt_target as _;
 
-use systick_monotonic::{Systick, fugit::Duration};
 
-#[app(device = board, peripherals = false, dispatchers = [RTC1])] 
+#[app(device = board, peripherals = false, dispatchers = [SWI0_EGU0,
+                                                        SWI1_EGU1])] 
 mod app {
-    use rtt_target::{rtt_init_print};
-    use rtt_target::rprintln;
+    use rtt_target::{rtt_init_print, rprintln};
     use board::*;
 
-    /*
-    To be removed
-    use nrf52840_hal as hal;
-    use hal::gpiote::Gpiote; from cargo board
-    */
-
+    //use systick_monotonic::{Systick, fugit};
     #[monotonic(binds = SysTick, default = true)]    
-    //type MyMono = Systick<100>;
+    // type MyMono = Systick<1000>;
+
 
     #[local]
     struct LocalResources {
         led: Led,
+        button: Button,
     }
 
     #[shared]
@@ -31,6 +27,10 @@ mod app {
         gpiote: Gpiote,
         #[lock_free]
         counter_blink: u16,
+        #[lock_free]
+        counter_interrupt: u16,   
+        #[lock_free]
+        debounce: ButtonBlocker,
     }
 
     #[init]
@@ -39,42 +39,43 @@ mod app {
         rtt_init_print!();
 
         let my_board = board::init_board().unwrap();
-        let led = my_board.leds._2;
-        let gpiote = my_board.gpiote;
         
-        //rtt_target::rprintln!("dupa");
+        rtt_target::rprintln!("Board initialized");
 
         ( 
-            SharedResources { gpiote: gpiote,
-            counter_blink: 0 }, 
-            LocalResources {led: led}, 
-            init::Monotonics()
+            SharedResources { gpiote: my_board.gpiote,
+                counter_interrupt: 0,
+                counter_blink: 0,
+                debounce: my_board.blocking_timer}, 
+
+            LocalResources {led: my_board.leds._1,
+                            button: my_board.buttons._4},
+
+            init::Monotonics(),
         )
     }
 
-    #[task(local = [led],
-        shared = [counter_blink])]
-    fn task1(cx: task1::Context)   {
-        cx.local.led.toggle();
-        //let value = cx.shared.counter_blink.ta
-        rprintln!("LED toggled {}", cx.shared.counter_blink);
-    }
 
 
     #[task(binds = GPIOTE,
-        shared = [gpiote, counter_blink])]
-    fn inter(mut cx: inter::Context)    {
+        shared = [gpiote, counter_blink, counter_interrupt, debounce],
+        local = [led, button])]
+    fn blink_diode(mut cx: blink_diode::Context)    {
+
         cx.shared.gpiote.lock(|gpiote|  {
-            gpiote.reset_events();
             
-            task1::spawn().unwrap();
-            *cx.shared.counter_blink += 1;
-            rprintln!("Entered interrupt {}' time", cx.shared.counter_blink);
-            /*
-            cx.shared.counter_blink.lock(|counter_blink| {
-                *counter_blink += 1;
-            });
-            */
+            *cx.shared.counter_interrupt += 1;
+            rprintln!("Entered interrupt {}' time", cx.shared.counter_interrupt);
+            gpiote.reset_events();
+
+
+            cx.shared.debounce.wait(TimeDuration::Mili(70));
+            if cx.local.button.is_pushed()  {
+
+                *cx.shared.counter_blink += 1;
+                cx.local.led.toggle();
+                rprintln!("LED toggled {}", cx.shared.counter_blink);
+            }
         });
     }
 
