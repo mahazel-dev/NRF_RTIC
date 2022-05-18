@@ -20,6 +20,7 @@ mod app {
     struct LocalResources {
         led: Led,
         button: Button,
+        uarte: uarte_struct,
     }
 
     #[shared]
@@ -31,6 +32,7 @@ mod app {
         counter_interrupt: u16,   
         #[lock_free]
         debounce: ButtonBlocker,
+
     }
 
     #[init]
@@ -48,22 +50,23 @@ mod app {
                 counter_blink: 0,
                 debounce: my_board.blocking_timer}, 
 
-            LocalResources {led: my_board.leds._1,
-                            button: my_board.buttons._4},
-
+            LocalResources {led: my_board.leds._4,
+                            button: my_board.buttons._4,
+                            uarte: my_board.uarte_board},
+            
             init::Monotonics(),
         )
     }
 
 
 
+
+
     #[task(binds = GPIOTE,
         shared = [gpiote, counter_blink, counter_interrupt, debounce],
-        local = [led, button])]
+        local = [led, button, uarte])]
     fn blink_diode(mut cx: blink_diode::Context)    {
-
         cx.shared.gpiote.lock(|gpiote|  {
-            
             *cx.shared.counter_interrupt += 1;
             rprintln!("Entered interrupt {}' time", cx.shared.counter_interrupt);
             gpiote.reset_events();

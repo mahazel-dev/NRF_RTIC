@@ -1,23 +1,16 @@
 #![no_std]
-
-use hal::timer::OneShot;
 use nrf52840_hal as hal;
 
-pub use hal::{gpio, gpio::*, gpiote, gpiote::*,
+pub use hal::{gpio, gpio::*, 
+    gpiote::{self, *},
     clocks, Clocks,
-    Timer};
+    Timer, timer::OneShot,
+    uarte::*};
 
 pub use hal::pac::{interrupt, Interrupt, NVIC_PRIO_BITS, 
-    TIMER0};
+    TIMER0,
+    UARTE0, uarte0::*};
 
-use embedded_hal::digital::v2::
-    {OutputPin as _, InputPin as _,
-        StatefulOutputPin};
-
-use hal::prelude::{_embedded_hal_blocking_delay_DelayMs,
-        _embedded_hal_blocking_delay_DelayUs};
-
-//pub use hal::ieee802154;
 
 pub fn init_board()   -> Result<Device, ()>   {
     if let Some(periph) = hal::pac::Peripherals::take() {
@@ -37,7 +30,6 @@ pub fn init_board()   -> Result<Device, ()>   {
 
         // ********** GPIO Configuration ********** 
         let pins = gpio::p0::Parts::new(periph.P0);
-        let gpiote = gpiote::Gpiote::new(periph.GPIOTE);
         
         // LED config
         let led_1 = pins.p0_13.degrade().into_push_pull_output(gpio::Level::High);
@@ -51,13 +43,39 @@ pub fn init_board()   -> Result<Device, ()>   {
         let button_3 = pins.p0_24.degrade().into_pullup_input();
         let button_4 = pins.p0_25.degrade().into_pullup_input();
         
+        // ********** GPIOTE Configuration **********
+        //  
+        let gpiote = gpiote::Gpiote::new(periph.GPIOTE);
         // Interuppter button
+        gpiote.port().input_pin(&button_1).low();
+        gpiote.port().input_pin(&button_2).low();
+        gpiote.port().input_pin(&button_3).low();
         gpiote.port().input_pin(&button_4).low();
         gpiote.port().enable_interrupt();
 
-        // Blocker
-        let blocker = hal::Timer::one_shot(periph.TIMER0); 
+        // Blocker for button - to delete
+        let blocker = hal::Timer::one_shot(periph.TIMER0);
+
+        // ********** UART configuration Configuration **********
+        // UART unwrap and basic configure
+        let uarte = Uarte::new(periph.UARTE0,
+            hal::uarte::Pins {
+                rxd: pins.p0_08.degrade().into_floating_input(),
+                txd: pins.p0_06.degrade().into_push_pull_output(gpio::Level::High),
+                cts: None,
+                rts: None,
+            },
+            Parity::EXCLUDED,
+            Baudrate::BAUD19200,
+        );
+        // UART wrap to readible/editable struct
+        let uarte_temp = uarte.free();
+        let uarte = uarte_struct { 
+            Type: uarte_temp.0, Pins: uarte_temp.1 };
         
+        
+
+        // ********** Return Result<Device, Err) **********    
         Ok(Device {
             leds: Leds  {
                 _1: Led { inner: led_1 },
@@ -78,12 +96,17 @@ pub fn init_board()   -> Result<Device, ()>   {
             },
 
             gpiote: gpiote,
+
+            uarte_board: uarte
         })
         
     } else  {
         Err(())
     }
 }
+
+
+
 
 pub struct Device   {
     /// Add LEDs to my board
@@ -94,9 +117,19 @@ pub struct Device   {
     pub blocking_timer: ButtonBlocker,
     // Add GPIOTE feature
     pub gpiote: Gpiote,
+    // Add UARTE
+    pub uarte_board: uarte_struct,
+}
+
+pub struct uarte_struct {
+    pub Type: UARTE0,
+    pub Pins: Pins,
 }
 
 
+use embedded_hal::digital::v2::
+    {OutputPin as _, InputPin as _,
+        StatefulOutputPin};
 pub struct Leds {
     // LED1: pin P0.13, green
     pub _1: Led,
@@ -194,7 +227,8 @@ pub struct ButtonBlocker {
     pub inner: hal::Timer<TIMER0, OneShot>
 }
 
-
+use hal::prelude::{_embedded_hal_blocking_delay_DelayMs,
+    _embedded_hal_blocking_delay_DelayUs};
 
 impl ButtonBlocker  {
     pub fn wait(&mut self, duration: TimeDuration)   {
