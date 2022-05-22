@@ -57,6 +57,7 @@ dependencies = [
  "defmt",
  "embedded-hal",
  "nrf52840-hal",
+ "volatile-register",
 ]
 
 [[package]]

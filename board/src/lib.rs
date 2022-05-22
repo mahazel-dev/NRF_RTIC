@@ -11,6 +11,8 @@ pub use hal::pac::{interrupt, Interrupt, NVIC_PRIO_BITS,
     TIMER0,
     UARTE0, uarte0::*};
 
+pub use core::slice;
+
 
 pub fn init_board()   -> Result<Device, ()>   {
     if let Some(periph) = hal::pac::Peripherals::take() {
@@ -68,14 +70,22 @@ pub fn init_board()   -> Result<Device, ()>   {
             Parity::EXCLUDED,
             Baudrate::BAUD19200,
         );
-        // UART wrap to readible/editable struct
-        let uarte_temp = uarte.free();
-        let uarte = uarte_struct { 
-            Type: uarte_temp.0, Pins: uarte_temp.1 };
-        
-        
+   
+        //let temp_TxBuffor: &'static mut [u8] = 
+          //  unsafe { slice::from_raw_parts_mut(0x2001_0000 as *mut u8, 6)};
 
-        // ********** Return Result<Device, Err) **********    
+        //let temp_TxBuffor:  = RW::<slice::from_raw_parts_mut(0x2001_0000 as *mut u8, 6)>;
+
+        let temp_tx_buffor = TxBuffor::new();
+
+        unsafe { temp_tx_buffor.inner._0.write(0x30 + 0); }
+        unsafe { temp_tx_buffor.inner._1.write(0x30 + 0); }
+        unsafe { temp_tx_buffor.inner._2.write(0x23); }
+        unsafe { temp_tx_buffor.inner._3.write(0x30 + 0); }
+        unsafe { temp_tx_buffor.inner._4.write(0x30 + 0); }
+        unsafe { temp_tx_buffor.inner._5.write(0x0A); }
+
+        // **********!! Return Result<Device, Err) !!**********    
         Ok(Device {
             leds: Leds  {
                 _1: Led { inner: led_1 },
@@ -97,7 +107,10 @@ pub fn init_board()   -> Result<Device, ()>   {
 
             gpiote: gpiote,
 
-            uarte_board: uarte
+            uarte_board: uarte,
+
+            tx_buffor: temp_tx_buffor,
+
         })
         
     } else  {
@@ -106,7 +119,7 @@ pub fn init_board()   -> Result<Device, ()>   {
 }
 
 
-
+use volatile_register::*;
 
 pub struct Device   {
     /// Add LEDs to my board
@@ -117,19 +130,54 @@ pub struct Device   {
     pub blocking_timer: ButtonBlocker,
     // Add GPIOTE feature
     pub gpiote: Gpiote,
-    // Add UARTE
-    pub uarte_board: uarte_struct,
+    // Add UARTE 
+    pub uarte_board: Uarte<UARTE0>,
+    // DMA Handler
+    pub tx_buffor: TxBuffor,
+
+}
+#[repr(C)]
+pub struct TxBlock  {
+    pub _0: RW<u8>,
+    pub _1: RW<u8>,
+    pub _2: RW<u8>,
+    pub _3: RW<u8>,
+    pub _4: RW<u8>,
+    pub _5: RW<u8>,
 }
 
-pub struct uarte_struct {
-    pub Type: UARTE0,
-    pub Pins: Pins,
+pub struct TxBuffor {
+    pub inner: &'static mut TxBlock,
+}
+
+impl TxBuffor  {
+    pub fn new() -> TxBuffor    {
+        TxBuffor {
+                inner: unsafe { &mut *(0x2001_0000 as *mut TxBlock) },
+            }
+    }
+    pub fn read(&self)  -> &[u8]  {
+        unsafe { slice::from_raw_parts(0x2001_0000 as *const u8, 6) }
+
+    }
+    /*
+    pub fn read(&self)  -> [u8; 6]  {
+        [   self.inner._0.read(),
+            self.inner._1.read(),
+            self.inner._2.read(),
+            self.inner._3.read(),
+            self.inner._4.read(),
+            self.inner._5.read(),
+        ]
+    }
+    */
 }
 
 
 use embedded_hal::digital::v2::
     {OutputPin as _, InputPin as _,
         StatefulOutputPin};
+
 pub struct Leds {
     // LED1: pin P0.13, green
     pub _1: Led,
