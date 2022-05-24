@@ -5,7 +5,7 @@ pub use hal::{gpio, gpio::*,
     gpiote::{self, *},
     clocks, Clocks,
     Timer, timer::OneShot,
-    uarte::*};
+    Uarte, uarte::*};
 
 pub use hal::pac::{interrupt, Interrupt, NVIC_PRIO_BITS, 
     TIMER0,
@@ -68,22 +68,19 @@ pub fn init_board()   -> Result<Device, ()>   {
                 rts: None,
             },
             Parity::EXCLUDED,
-            Baudrate::BAUD19200,
+            Baudrate::BAUD115200,
         );
-   
-        //let temp_TxBuffor: &'static mut [u8] = 
-          //  unsafe { slice::from_raw_parts_mut(0x2001_0000 as *mut u8, 6)};
+        
+        let dma_uarte = DmaUarteBuffor::new();
+        
+        //unsafe {dma_uarte.TxBlock.write([0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31]);}
+        //unsafe { *dma_uarte.TxBlock = [0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31] }; 
+        //unsafe { *dma_uarte.TxBlock = [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38]};
 
-        //let temp_TxBuffor:  = RW::<slice::from_raw_parts_mut(0x2001_0000 as *mut u8, 6)>;
+        unsafe { dma_uarte.TxBlock.write_volatile(
+            [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38]);}
 
-        let temp_tx_buffor = TxBuffor::new();
 
-        unsafe { temp_tx_buffor.inner._0.write(0x30 + 0); }
-        unsafe { temp_tx_buffor.inner._1.write(0x30 + 0); }
-        unsafe { temp_tx_buffor.inner._2.write(0x23); }
-        unsafe { temp_tx_buffor.inner._3.write(0x30 + 0); }
-        unsafe { temp_tx_buffor.inner._4.write(0x30 + 0); }
-        unsafe { temp_tx_buffor.inner._5.write(0x0A); }
 
         // **********!! Return Result<Device, Err) !!**********    
         Ok(Device {
@@ -109,7 +106,7 @@ pub fn init_board()   -> Result<Device, ()>   {
 
             uarte_board: uarte,
 
-            tx_buffor: temp_tx_buffor,
+            uarte_buffor: dma_uarte,
 
         })
         
@@ -118,7 +115,7 @@ pub fn init_board()   -> Result<Device, ()>   {
     }
 }
 
-
+/* */
 use volatile_register::*;
 
 pub struct Device   {
@@ -133,44 +130,27 @@ pub struct Device   {
     // Add UARTE 
     pub uarte_board: Uarte<UARTE0>,
     // DMA Handler
-    pub tx_buffor: TxBuffor,
+    //pub tx_buffor: TxBuffor,
+    pub uarte_buffor: DmaUarteBuffor,
 
 }
-#[repr(C)]
-pub struct TxBlock  {
-    pub _0: RW<u8>,
-    pub _1: RW<u8>,
-    pub _2: RW<u8>,
-    pub _3: RW<u8>,
-    pub _4: RW<u8>,
-    pub _5: RW<u8>,
+
+
+pub struct DmaUarteBuffor   {
+    pub TxBlock: *mut [u8; 8],
+    pub RxBlock: *mut [u8; 8],
+    pub RxBlockLen: usize,
+    pub TxBlockLen: usize,
+
 }
+unsafe impl Send for DmaUarteBuffor {}  
 
-pub struct TxBuffor {
-    pub inner: &'static mut TxBlock,
-}
-
-impl TxBuffor  {
-    pub fn new() -> TxBuffor    {
-        TxBuffor {
-                inner: unsafe { &mut *(0x2001_0000 as *mut TxBlock) },
-            }
+impl DmaUarteBuffor {
+    pub fn new()  -> DmaUarteBuffor   {
+            DmaUarteBuffor { TxBlock: unsafe {&mut *((0x2000_0000 + 0x40) as *mut [u8; 8])},
+                RxBlock: unsafe {&mut *((0x2000_0000 + 0x80)  as *mut [u8; 8])},
+            TxBlockLen: 8,        RxBlockLen: 8,}
     }
-    pub fn read(&self)  -> &[u8]  {
-        unsafe { slice::from_raw_parts(0x2001_0000 as *const u8, 6) }
-
-    }
-    /*
-    pub fn read(&self)  -> [u8; 6]  {
-        [   self.inner._0.read(),
-            self.inner._1.read(),
-            self.inner._2.read(),
-            self.inner._3.read(),
-            self.inner._4.read(),
-            self.inner._5.read(),
-        ]
-    }
-    */
 }
 
 

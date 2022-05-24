@@ -9,8 +9,10 @@ use panic_rtt_target as _;
                                                         SWI1_EGU1])] 
 mod app {
     use board::*;
-    use systick_monotonic::{*, fugit::Duration};
-    use rtt_target::{rtt_init_print};
+    use systick_monotonic::*;
+    use rtt_target::{rtt_init_print, rprintln};
+
+    use crate::str_to_ptr;
     
     #[monotonic(binds = SysTick, default = true)]    
     type MyMono = Systick<10>;
@@ -29,7 +31,8 @@ mod app {
         #[lock_free]
         gpiote: Gpiote,
         #[lock_free]
-        tx_status: TxBuffor,
+        uarte_buffor: DmaUarteBuffor,
+        // tx_status: TxBuffor,
     }
 
     #[init]
@@ -38,24 +41,24 @@ mod app {
         rtt_init_print!();
         let my_board = board::init_board().unwrap();
         rtt_target::rprintln!("Board initialized\n----------");
-    
-        let mut leds = my_board.leds;
-        let buttons = my_board.buttons;
-    
-
+        
+        
         let clk = _ctx.core.SYST;
         let mono = Systick::new(clk, 64_000_000);
 
-
-
+        let leds = my_board.leds;
+        let buttons = my_board.buttons;
         let system_on = true;
         system_on::spawn_after(1.secs()).unwrap();
+
+        let dmaBuffor = my_board.uarte_buffor;
 
         ( 
             SharedResources {
                 gpiote: my_board.gpiote,
-                tx_status: my_board.tx_buffor,
-                leds: leds,}, 
+                //tx_status: my_board.tx_buffor,
+                leds: leds,
+                uarte_buffor: dmaBuffor}, 
 
             LocalResources  {
                 system_on,
@@ -69,25 +72,29 @@ mod app {
 
     #[task(local = [buttons,
             uarte,],
-        shared = [tx_status,
-            leds])]
+        shared = [leds,
+        uarte_buffor])]
 
     fn debounce(cx: debounce::Context)  {
         let buttons = cx.local.buttons;
         let leds = cx.shared.leds;
-        let uarte = cx.local.uarte;
-                
 
-        if buttons._1.is_pushed() { leds._1.toggle();}
-        else if buttons._2.is_pushed() { leds._2.toggle(); }
-        else if buttons._3.is_pushed() { leds._3.toggle(); }
+        let uarte = cx.local.uarte;        
+        let uarte_tx = cx.shared.uarte_buffor.TxBlock;
 
-        //let frame = cx.shared.tx_status.read();
-        //let frame = unsafe { slice::from_raw_parts(0x2001_0000 as *const u8, 6) };      //slice::from_raw_parts(0x2001_0000 as *mut u8, 1);
-        let frame = cx.shared.tx_status.read();
+        let mut msg = "GPIOTE";
 
+        if buttons._1.is_pushed() { leds._1.toggle();
+            msg = "LED1_T"}
+        else if buttons._2.is_pushed() { leds._2.toggle(); 
+            msg = "LED2_T"}
+        else if buttons._3.is_pushed() { leds._3.toggle(); 
+            msg = "LED3_T"}
+        
+        str_to_ptr(msg, uarte_tx);
+        let frame = unsafe { slice::from_raw_parts(uarte_tx as *mut u8, 8) };
+        
         uarte.write(frame).unwrap();
-        // else if buttons._4.is_pushed() { leds._4.toggle(); }
 
     }
 
@@ -111,7 +118,32 @@ mod app {
         }
     }
 
-        
-        //system_on::spawn_after(1.secs()).unwrap();
+
 }
 
+fn str_to_ptr(string: &str, ptr: *mut [u8; 8]) {
+    let msg: &str;
+
+    let mut frame: [u8; 8] = [0x0A, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23,];
+
+    if string.len() > 7  { msg = "TOOLONG";}
+    else { msg = string };
+    let msg = msg.as_bytes();
+
+    for i in 1..=msg.len() {
+        frame[8 - i] = msg[msg.len() - i];
+    }
+
+    
+    unsafe { ptr.write(frame) } ; 
+}
+
+
+/*
+fn uarte_write_msg(uart: Uarte<UARTE0>, string: &str )    {
+    let str_len = string.len();
+    let str = string.as_bytes();
+
+    let mut frame: [u8; 8] = [0x0A, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23];
+}
+*/
