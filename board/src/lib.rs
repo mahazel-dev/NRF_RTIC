@@ -1,18 +1,22 @@
 #![no_std]
 use nrf52840_hal as hal;
 
-pub use hal::{gpio, gpio::*, 
-    gpiote::{self, *},
+pub mod board_uarte;
+pub use board_uarte::*;
+
+pub mod board_gpiote;
+pub use board_gpiote::*;
+
+
+pub use hal::{gpio, gpio::*,
     clocks, Clocks,
-    Timer, timer::OneShot,
-    Uarte, uarte::*};
+    Timer, timer::OneShot,};
 
 pub use hal::pac::{interrupt, Interrupt, NVIC_PRIO_BITS, 
     TIMER0,
-    UARTE0, uarte0::*};
+};
 
 pub use core::slice;
-
 
 pub fn init_board()   -> Result<Device, ()>   {
     if let Some(periph) = hal::pac::Peripherals::take() {
@@ -47,13 +51,13 @@ pub fn init_board()   -> Result<Device, ()>   {
         
         // ********** GPIOTE Configuration **********
         //  
-        let gpiote = gpiote::Gpiote::new(periph.GPIOTE);
+        let board_gpiote = gpiote::Gpiote::new(periph.GPIOTE);
         // Interuppter button
-        gpiote.port().input_pin(&button_1).low();
-        gpiote.port().input_pin(&button_2).low();
-        gpiote.port().input_pin(&button_3).low();
-        gpiote.port().input_pin(&button_4).low();
-        gpiote.port().enable_interrupt();
+        board_gpiote.port().input_pin(&button_1).low();
+        board_gpiote.port().input_pin(&button_2).low();
+        board_gpiote.port().input_pin(&button_3).low();
+        board_gpiote.port().input_pin(&button_4).low();
+        board_gpiote.port().enable_interrupt();
 
         // Blocker for button - to delete
         let blocker = hal::Timer::one_shot(periph.TIMER0);
@@ -71,15 +75,17 @@ pub fn init_board()   -> Result<Device, ()>   {
             Baudrate::BAUD115200,
         );
         
+        //let dma_uarte = DmaUarteBuffor::new(4, 4);
         let dma_uarte = DmaUarteBuffor::new();
         
         //unsafe {dma_uarte.TxBlock.write([0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31]);}
-        //unsafe { *dma_uarte.TxBlock = [0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31] }; 
         //unsafe { *dma_uarte.TxBlock = [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38]};
 
-        unsafe { dma_uarte.TxBlock.write_volatile(
-            [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38]);}
+        str_to_ptr(UARTE_TX_BUF_DEF, &dma_uarte.TxBlock);
 
+         // unsafe { *dma_uarte.TxBlock = "\n#######".as_bytes()};
+
+        //unsafe { *dma_uarte.TxBlock = 0x1;}
 
 
         // **********!! Return Result<Device, Err) !!**********    
@@ -102,7 +108,7 @@ pub fn init_board()   -> Result<Device, ()>   {
                 inner: blocker,
             },
 
-            gpiote: gpiote,
+            gpiote: board_gpiote,
 
             uarte_board: uarte,
 
@@ -116,7 +122,7 @@ pub fn init_board()   -> Result<Device, ()>   {
 }
 
 /* */
-use volatile_register::*;
+
 
 pub struct Device   {
     /// Add LEDs to my board
@@ -133,24 +139,6 @@ pub struct Device   {
     //pub tx_buffor: TxBuffor,
     pub uarte_buffor: DmaUarteBuffor,
 
-}
-
-
-pub struct DmaUarteBuffor   {
-    pub TxBlock: *mut [u8; 8],
-    pub RxBlock: *mut [u8; 8],
-    pub RxBlockLen: usize,
-    pub TxBlockLen: usize,
-
-}
-unsafe impl Send for DmaUarteBuffor {}  
-
-impl DmaUarteBuffor {
-    pub fn new()  -> DmaUarteBuffor   {
-            DmaUarteBuffor { TxBlock: unsafe {&mut *((0x2000_0000 + 0x40) as *mut [u8; 8])},
-                RxBlock: unsafe {&mut *((0x2000_0000 + 0x80)  as *mut [u8; 8])},
-            TxBlockLen: 8,        RxBlockLen: 8,}
-    }
 }
 
 

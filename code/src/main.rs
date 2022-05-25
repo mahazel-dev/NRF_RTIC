@@ -12,7 +12,6 @@ mod app {
     use systick_monotonic::*;
     use rtt_target::{rtt_init_print, rprintln};
 
-    use crate::str_to_ptr;
     
     #[monotonic(binds = SysTick, default = true)]    
     type MyMono = Systick<10>;
@@ -83,7 +82,6 @@ mod app {
         let uarte_tx = cx.shared.uarte_buffor.TxBlock;
 
         let mut msg = "GPIOTE";
-
         if buttons._1.is_pushed() { leds._1.toggle();
             msg = "LED1_T"}
         else if buttons._2.is_pushed() { leds._2.toggle(); 
@@ -91,11 +89,13 @@ mod app {
         else if buttons._3.is_pushed() { leds._3.toggle(); 
             msg = "LED3_T"}
         
-        str_to_ptr(msg, uarte_tx);
+
+       
+        str_to_ptr(msg, &uarte_tx);
         let frame = unsafe { slice::from_raw_parts(uarte_tx as *mut u8, 8) };
         
         uarte.write(frame).unwrap();
-
+        
     }
 
     #[task(binds = GPIOTE, shared = [gpiote])]
@@ -121,29 +121,4 @@ mod app {
 
 }
 
-fn str_to_ptr(string: &str, ptr: *mut [u8; 8]) {
-    let msg: &str;
 
-    let mut frame: [u8; 8] = [0x0A, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23,];
-
-    if string.len() > 7  { msg = "TOOLONG";}
-    else { msg = string };
-    let msg = msg.as_bytes();
-
-    for i in 1..=msg.len() {
-        frame[8 - i] = msg[msg.len() - i];
-    }
-
-    
-    unsafe { ptr.write(frame) } ; 
-}
-
-
-/*
-fn uarte_write_msg(uart: Uarte<UARTE0>, string: &str )    {
-    let str_len = string.len();
-    let str = string.as_bytes();
-
-    let mut frame: [u8; 8] = [0x0A, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23];
-}
-*/
