@@ -86,14 +86,16 @@ mod app {
         cx.shared.uart.write_str(msg);
   
         if buttons._1.is_pushed() { leds._1.toggle();
-            msg = "\nLED1 toggled"}
+            msg = "\nLED1 toggled"
+
+        }
         else if buttons._2.is_pushed() { leds._2.toggle(); 
             msg = "\nLED2 toggled"}
         else if buttons._3.is_pushed() { leds._3.toggle(); 
             msg = "\nLED3 toggled"}
 
         cx.shared.uart.write_str(msg);
-
+        //cx.shared.uart.write_frame([0x38, 0x38, 0x38, 0x38, 0x38, 0x38]);
     }
 
     #[task(binds = GPIOTE, shared = [gpiote])]
@@ -124,7 +126,15 @@ mod app {
         }
     }
 
-
+    #[task(binds = UARTE0_UART0, shared = [uart])]
+    fn uart_read(cx: uart_read::Context)    {
+        let byte = cx.shared.uart.read();
+        cx.shared.uart.write_str("\nentered interrupt");
+        match byte  {
+            Some(byte)  => cx.shared.uart.write_byte(byte),
+            None => cx.shared.uart.write_str("\nSomething went wrong"),
+        }
+    }
 }
 
 

@@ -61,6 +61,12 @@ impl Uart {
         // Enable UART function.
         uart.enable.write(|w| w.enable().enabled());
 
+        // Fire up receiving data
+        uart.tasks_startrx.write(|w| unsafe { w.bits(1) });
+        uart.intenset.write(|w| w.rxdrdy().set());
+        
+        uart.events_rxdrdy.write(|w| w.events_rxdrdy().set_bit());
+
         let u = Uart(uart);
         u
         
@@ -84,6 +90,33 @@ impl Uart {
         
         self.0.tasks_stoptx.write(|w| unsafe { w.bits(1) });
     }
+
+
+    pub fn write_frame(&mut self, frame: [u8; 6])   {
+        self.0.tasks_starttx.write(|w| unsafe { w.bits(1) });
+
+        let msg = frame; //.iter().map(|byte| byte + 1);
+
+        for sign in msg    {
+            self.write_byte(sign);
+            while self.0.events_txdrdy.read().bits() == 0   {}
+            self.0.events_txdrdy.reset();
+        }
+        
+        self.0.tasks_stoptx.write(|w| unsafe { w.bits(1) });
+    }
+
+    
+    pub fn read(&mut self) -> Option<u8>  {
+        if self.0.events_rxdrdy.read().events_rxdrdy().bit_is_set() {
+            self.0.events_rxdrdy.reset();
+            let byte = self.0.rxd.read().bits() as u8;
+            Some(byte)
+        } else { None }
+    }
+
+
+
 }
 
 
