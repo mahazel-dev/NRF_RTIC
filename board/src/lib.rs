@@ -1,8 +1,11 @@
 #![no_std]
 use nrf52840_hal as hal;
 
-pub mod board_uarte;
-pub use board_uarte::*;
+pub mod board_uart;
+pub use board_uart::*;
+
+//pub mod board_uarte;
+//pub use board_uarte::*;
 
 pub mod board_gpiote;
 pub use board_gpiote::*;
@@ -56,14 +59,31 @@ pub fn init_board()   -> Result<Device, ()>   {
         board_gpiote.port().input_pin(&button_1).low();
         board_gpiote.port().input_pin(&button_2).low();
         board_gpiote.port().input_pin(&button_3).low();
-        board_gpiote.port().input_pin(&button_4).low();
+        //board_gpiote.port().input_pin(&button_4).low();
         board_gpiote.port().enable_interrupt();
 
         // Blocker for button - to delete
         let blocker = hal::Timer::one_shot(periph.TIMER0);
 
-        // ********** UART configuration Configuration **********
-        // UART unwrap and basic configure
+        // ********** UARTE configuration Configuration **********
+        // UARTE unwrap and basic configure
+        let board_uart = Uart::new(periph.UART0,
+            UartPins {
+                rxd: pins.p0_08.degrade().into_floating_input(),
+                txd: pins.p0_06.degrade().into_push_pull_output(gpio::Level::High),
+                cts: None,
+                rts: None,
+            },
+            Uart_Parity::EXCLUDED,
+            Uart_Baudrate::BAUD115200,
+        );
+
+        //board_uart.write_byte(0x43);
+
+
+        /*
+        // ********** UARTE configuration Configuration **********
+        // UARTE unwrap and basic configure
         let uarte = Uarte::new(periph.UARTE0,
             hal::uarte::Pins {
                 rxd: pins.p0_08.degrade().into_floating_input(),
@@ -74,20 +94,13 @@ pub fn init_board()   -> Result<Device, ()>   {
             Parity::EXCLUDED,
             Baudrate::BAUD115200,
         );
-        
         //let dma_uarte = DmaUarteBuffor::new(4, 4);
         let dma_uarte = DmaUarteBuffor::new();
         
         //unsafe {dma_uarte.TxBlock.write([0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31]);}
         //unsafe { *dma_uarte.TxBlock = [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38]};
 
-        str_to_ptr(UARTE_TX_BUF_DEF, &dma_uarte.TxBlock);
-
-         // unsafe { *dma_uarte.TxBlock = "\n#######".as_bytes()};
-
-        //unsafe { *dma_uarte.TxBlock = 0x1;}
-
-
+        */
         // **********!! Return Result<Device, Err) !!**********    
         Ok(Device {
             leds: Leds  {
@@ -110,9 +123,11 @@ pub fn init_board()   -> Result<Device, ()>   {
 
             gpiote: board_gpiote,
 
-            uarte_board: uarte,
+            uart: board_uart,
 
-            uarte_buffor: dma_uarte,
+            //uarte_board: uarte,
+
+            //uarte_buffor: dma_uarte,
 
         })
         
@@ -133,11 +148,13 @@ pub struct Device   {
     pub blocking_timer: ButtonBlocker,
     // Add GPIOTE feature
     pub gpiote: Gpiote,
+    // Add Uart feature
+    pub uart: Uart,
+
     // Add UARTE 
-    pub uarte_board: Uarte<UARTE0>,
+    //pub uarte_board: Uarte<UARTE0>,
     // DMA Handler
-    //pub tx_buffor: TxBuffor,
-    pub uarte_buffor: DmaUarteBuffor,
+    //pub uarte_buffor: DmaUarteBuffor,
 
 }
 

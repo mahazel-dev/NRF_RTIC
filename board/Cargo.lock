@@ -56,6 +56,7 @@ version = "0.1.0"
 dependencies = [
  "defmt",
  "embedded-hal",
+ "nb 1.0.0",
  "nrf52840-hal",
  "volatile-register",
 ]

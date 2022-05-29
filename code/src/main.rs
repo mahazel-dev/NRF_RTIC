@@ -10,7 +10,7 @@ use panic_rtt_target as _;
 mod app {
     use board::*;
     use systick_monotonic::*;
-    use rtt_target::{rtt_init_print, rprintln};
+    use rtt_target::rtt_init_print;
 
     
     #[monotonic(binds = SysTick, default = true)]    
@@ -20,7 +20,6 @@ mod app {
     struct LocalResources {
         buttons: Buttons,
         system_on: bool,
-        uarte: Uarte<UARTE0>,
     }
 
     #[shared]
@@ -30,8 +29,7 @@ mod app {
         #[lock_free]
         gpiote: Gpiote,
         #[lock_free]
-        uarte_buffor: DmaUarteBuffor,
-        // tx_status: TxBuffor,
+        uart: Uart,
     }
 
     #[init]
@@ -41,28 +39,29 @@ mod app {
         let my_board = board::init_board().unwrap();
         rtt_target::rprintln!("Board initialized\n----------");
         
-        
+
         let clk = _ctx.core.SYST;
         let mono = Systick::new(clk, 64_000_000);
 
         let leds = my_board.leds;
         let buttons = my_board.buttons;
+        let uart = my_board.uart;
+        //let dmaBuffor = my_board.uarte_buffor;
+
         let system_on = true;
         system_on::spawn_after(1.secs()).unwrap();
-
-        let dmaBuffor = my_board.uarte_buffor;
 
         ( 
             SharedResources {
                 gpiote: my_board.gpiote,
-                //tx_status: my_board.tx_buffor,
                 leds: leds,
-                uarte_buffor: dmaBuffor}, 
-
+                uart: uart, 
+            },
+            
             LocalResources  {
                 system_on,
                 buttons: buttons,
-                uarte: my_board.uarte_board,
+                //uarte: my_board.uarte_board,
             },
             
             init::Monotonics(mono),
@@ -70,32 +69,29 @@ mod app {
     }
 
     #[task(local = [buttons,
-            uarte,],
+        ],
         shared = [leds,
-        uarte_buffor])]
-
+        uart,
+        ])]
     fn debounce(cx: debounce::Context)  {
         let buttons = cx.local.buttons;
         let leds = cx.shared.leds;
-
-        let uarte = cx.local.uarte;        
-        let uarte_tx = cx.shared.uarte_buffor.TxBlock;
-
-        let mut msg = "GPIOTE";
+        
+        //cx.shared.uart.write_byte(0x43);
+        //let uarte = cx.local.uarte;
+              
+        let mut msg: &str = "\nEntered GPIO";
+        cx.shared.uart.write_str(msg);
+  
         if buttons._1.is_pushed() { leds._1.toggle();
-            msg = "LED1_T"}
+            msg = "\nLED1 toggled"}
         else if buttons._2.is_pushed() { leds._2.toggle(); 
-            msg = "LED2_T"}
+            msg = "\nLED2 toggled"}
         else if buttons._3.is_pushed() { leds._3.toggle(); 
-            msg = "LED3_T"}
-        
+            msg = "\nLED3 toggled"}
 
-       
-        str_to_ptr(msg, &uarte_tx);
-        let frame = unsafe { slice::from_raw_parts(uarte_tx as *mut u8, 8) };
-        
-        uarte.write(frame).unwrap();
-        
+        cx.shared.uart.write_str(msg);
+
     }
 
     #[task(binds = GPIOTE, shared = [gpiote])]
