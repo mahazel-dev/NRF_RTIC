@@ -20,6 +20,7 @@ mod app {
     struct LocalResources {
         buttons: Buttons,
         system_on: bool,
+        nfct: Nfct,
     }
 
     #[shared]
@@ -61,6 +62,7 @@ mod app {
             LocalResources  {
                 system_on,
                 buttons: buttons,
+                nfct: my_board.board_nfct,
                 //uarte: my_board.uarte_board,
             },
             
@@ -111,6 +113,14 @@ mod app {
     fn system_on(cx: system_on::Context)    {
         if *cx.local.system_on  {
             system_diode::spawn_after(500.millis()).ok();
+        }
+    }
+
+    #[task(binds = NFCT, local = [nfct])]
+    fn nfc(cx: nfc::Context)   {
+        let mut nfc = cx.local.nfct;
+        if nfc.field_detected()  {
+            debounce::spawn().unwrap();
         }
     }
 

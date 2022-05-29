@@ -10,6 +10,8 @@ pub use board_uart::*;
 pub mod board_gpiote;
 pub use board_gpiote::*;
 
+pub mod board_nfc;
+pub use board_nfc::*;
 
 pub use hal::{gpio, gpio::*,
     clocks, Clocks,
@@ -78,9 +80,6 @@ pub fn init_board()   -> Result<Device, ()>   {
             Uart_Baudrate::BAUD115200,
         );
 
-        //board_uart.write_byte(0x43);
-
-
         /*
         // ********** UARTE configuration Configuration **********
         // UARTE unwrap and basic configure
@@ -99,8 +98,12 @@ pub fn init_board()   -> Result<Device, ()>   {
         
         //unsafe {dma_uarte.TxBlock.write([0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31]);}
         //unsafe { *dma_uarte.TxBlock = [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38]};
-
         */
+
+        // ********** NFCT configuration Configuration **********
+        let board_nfct = Nfct::new(periph.NFCT);
+
+
         // **********!! Return Result<Device, Err) !!**********    
         Ok(Device {
             leds: Leds  {
@@ -124,6 +127,8 @@ pub fn init_board()   -> Result<Device, ()>   {
             gpiote: board_gpiote,
 
             uart: board_uart,
+
+            board_nfct: board_nfct,
 
             //uarte_board: uarte,
 
@@ -150,6 +155,8 @@ pub struct Device   {
     pub gpiote: Gpiote,
     // Add Uart feature
     pub uart: Uart,
+    // Add NFCT feature
+    pub board_nfct: Nfct,
 
     // Add UARTE 
     //pub uarte_board: Uarte<UARTE0>,
