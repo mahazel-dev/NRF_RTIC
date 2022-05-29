@@ -1,17 +1,20 @@
 #![no_std]
 use nrf52840_hal as hal;
 
-pub mod board_uart;
-pub use board_uart::*;
+pub mod lib_gpiote;
+pub use lib_gpiote::*;
+
+pub mod lib_uart;
+pub use lib_uart::*;
 
 //pub mod board_uarte;
 //pub use board_uarte::*;
 
-pub mod board_gpiote;
-pub use board_gpiote::*;
+pub mod lib_dma;
+pub use lib_dma::*;
 
-pub mod board_nfc;
-pub use board_nfc::*;
+pub mod lib_nfc;
+pub use lib_nfc::*;
 
 pub use hal::{gpio, gpio::*,
     clocks, Clocks,
@@ -20,8 +23,6 @@ pub use hal::{gpio, gpio::*,
 pub use hal::pac::{interrupt, Interrupt, NVIC_PRIO_BITS, 
     TIMER0,
 };
-
-pub use core::slice;
 
 pub fn init_board()   -> Result<Device, ()>   {
     if let Some(periph) = hal::pac::Peripherals::take() {
@@ -55,8 +56,7 @@ pub fn init_board()   -> Result<Device, ()>   {
         let button_4 = pins.p0_25.degrade().into_pullup_input();
         
         // ********** GPIOTE Configuration **********
-        //  
-        let board_gpiote = gpiote::Gpiote::new(periph.GPIOTE);
+        let board_gpiote = Gpiote::new(periph.GPIOTE);
         // Interuppter button
         board_gpiote.port().input_pin(&button_1).low();
         board_gpiote.port().input_pin(&button_2).low();
@@ -64,7 +64,7 @@ pub fn init_board()   -> Result<Device, ()>   {
         //board_gpiote.port().input_pin(&button_4).low();
         board_gpiote.port().enable_interrupt();
 
-        // Blocker for button - to delete
+        // Blocker for button - to delete, LEARN Monotonics
         let blocker = hal::Timer::one_shot(periph.TIMER0);
 
         // ********** UARTE configuration Configuration **********
@@ -94,11 +94,11 @@ pub fn init_board()   -> Result<Device, ()>   {
             Baudrate::BAUD115200,
         );
         //let dma_uarte = DmaUarteBuffor::new(4, 4);
+        */
         let dma_uarte = DmaUarteBuffor::new();
         
         //unsafe {dma_uarte.TxBlock.write([0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31]);}
         //unsafe { *dma_uarte.TxBlock = [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38]};
-        */
 
         // ********** NFCT configuration Configuration **********
         let board_nfct = Nfct::new(periph.NFCT);
@@ -124,15 +124,15 @@ pub fn init_board()   -> Result<Device, ()>   {
                 inner: blocker,
             },
 
-            gpiote: board_gpiote,
+            board_gpiote: board_gpiote,
 
-            uart: board_uart,
+            board_uart: board_uart,
 
             board_nfct: board_nfct,
 
             //uarte_board: uarte,
 
-            //uarte_buffor: dma_uarte,
+            uarte_buffor: dma_uarte,
 
         })
         
@@ -152,16 +152,15 @@ pub struct Device   {
     /// Add timer for general delay
     pub blocking_timer: ButtonBlocker,
     // Add GPIOTE feature
-    pub gpiote: Gpiote,
+    pub board_gpiote: Gpiote,
     // Add Uart feature
-    pub uart: Uart,
-    // Add NFCT feature
-    pub board_nfct: Nfct,
-
+    pub board_uart: Uart,
     // Add UARTE 
     //pub uarte_board: Uarte<UARTE0>,
+    // Add NFCT feature
+    pub board_nfct: Nfct,
     // DMA Handler
-    //pub uarte_buffor: DmaUarteBuffor,
+    pub uarte_buffor: DmaUarteBuffor,
 
 }
 

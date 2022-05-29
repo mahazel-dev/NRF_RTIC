@@ -46,7 +46,7 @@ mod app {
 
         let leds = my_board.leds;
         let buttons = my_board.buttons;
-        let uart = my_board.uart;
+        let uart = my_board.board_uart;
         //let dmaBuffor = my_board.uarte_buffor;
 
         let system_on = true;
@@ -54,7 +54,7 @@ mod app {
 
         ( 
             SharedResources {
-                gpiote: my_board.gpiote,
+                gpiote: my_board.board_gpiote,
                 leds: leds,
                 uart: uart, 
             },
@@ -118,7 +118,7 @@ mod app {
 
     #[task(binds = NFCT, local = [nfct])]
     fn nfc(cx: nfc::Context)   {
-        let mut nfc = cx.local.nfct;
+        let nfc = cx.local.nfct;
         if nfc.field_detected()  {
             debounce::spawn().unwrap();
         }

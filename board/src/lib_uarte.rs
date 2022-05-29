@@ -2,33 +2,10 @@ pub use crate::hal::Uarte;
 pub use crate::hal::uarte::*;
 pub use crate::hal::pac::{uarte0, UARTE0};
 
+
 use core::slice::from_raw_parts;
 
 //use volatile_register::*;
-
-static UARTE_TX_BUF: i32 = 0x2000_1000;
-pub static UARTE_TX_BUF_DEF: &str= "\n#######";
-static UARTE_RX_BUF: i32 = 0x2000_1000;
-
-
-pub struct DmaUarteBuffor   {
-    pub TxBlock: *mut [u8; 8],
-    pub RxBlock: *mut [u8; 8],
-    pub RxBlockLen: usize,
-    pub TxBlockLen: usize,
-
-}
-unsafe impl Send for DmaUarteBuffor {}
-
-
-impl DmaUarteBuffor {
-    pub fn new()  -> DmaUarteBuffor   {
-            DmaUarteBuffor { 
-                TxBlock: unsafe {&mut *((UARTE_TX_BUF) as *mut [u8; 8])},
-                RxBlock: unsafe {&mut *(UARTE_RX_BUF  as *mut [u8; 8])},
-                TxBlockLen: 8,        RxBlockLen: 8,}
-    }
-}
 
 pub trait MyUarte {
     fn write_string(&mut self, string: &str, dma: &mut DmaUarteBuffor);
