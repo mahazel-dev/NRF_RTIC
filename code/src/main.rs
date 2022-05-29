@@ -81,13 +81,10 @@ mod app {
         
         //cx.shared.uart.write_byte(0x43);
         //let uarte = cx.local.uarte;
-              
-        let mut msg: &str = "\nEntered GPIO";
-        cx.shared.uart.write_str(msg);
-  
+        let mut msg = "";
         if buttons._1.is_pushed() { leds._1.toggle();
+            //cx.shared.uart.toggle_rxd();
             msg = "\nLED1 toggled"
-
         }
         else if buttons._2.is_pushed() { leds._2.toggle(); 
             msg = "\nLED2 toggled"}
@@ -128,13 +125,12 @@ mod app {
 
     #[task(binds = UARTE0_UART0, shared = [uart])]
     fn uart_read(cx: uart_read::Context)    {
-        let byte = cx.shared.uart.read();
-        cx.shared.uart.write_str("\nentered interrupt");
-        match byte  {
-            Some(byte)  => cx.shared.uart.write_byte(byte),
-            None => cx.shared.uart.write_str("\nSomething went wrong"),
-        }
+        let byte = cx.shared.uart.read_byte();
+        cx.shared.uart.write_str("\nentered interrupt:__#\n");
+        cx.shared.uart.write_frame([byte, byte, byte, byte, byte, byte,]);
+        //match byte {
+        //    Some(byte) => cx.shared.uart.write_byte(byte),
+        //    None => cx.shared.uart.write_str("\nNone"),
+        cx.shared.uart.clear_rxdrdy();
     }
 }
-
-
