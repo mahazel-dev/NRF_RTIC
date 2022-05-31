@@ -172,9 +172,9 @@ dependencies = [
 
 [[package]]
 name = "defmt"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9252abe43d4c0a5df0c5c865129fa8daad338bb33357ba40023a37cd34b4a7b9"
+checksum = "d3a0ae7494d9bff013d7b89471f4c424356a71e9752e0c78abe7e6c608a16bb3"
 dependencies = [
  "bitflags",
  "defmt-macros",
@@ -347,9 +347,9 @@ checksum = "546c37ac5d9e56f55e73b677106873d9d9f5190605e41a856503623648488cae"
 
 [[package]]
 name = "nrf-hal-common"
-version = "0.15.0"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dedf20b0ce25f6fe49b1ac9c541c022d5fc2acf2751fe67550166f5cda89c011"
+checksum = "089242b8b729622099054dcb5518e9eac80bcf6a7e30091c7cfa043383e9998c"
 dependencies = [
  "cast",
  "cfg-if",
@@ -380,9 +380,9 @@ dependencies = [
 
 [[package]]
 name = "nrf52840-hal"
-version = "0.15.0"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "701b97ac9f7432f4df7b107be441bb71a943bf94208d4a4119f25a57fbc90fbc"
+checksum = "71c090616930ef132c1f7e9f9a964f6c8c5aa8962e402cc5abbbde7ce16ce9a0"
 dependencies = [
  "embedded-hal",
  "nrf-hal-common",
@@ -402,7 +402,7 @@ dependencies = [
 
 [[package]]
 name = "nrf_rtic"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "board",
  "cortex-m-rtic",
