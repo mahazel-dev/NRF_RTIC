@@ -116,6 +116,9 @@ mod app {
             msg = "\nLED3 toggled"}
         else if buttons._4.is_pushed() { leds._3.toggle(); 
             msg = "\nButton 4 pushed"}
+        defmt::info!("Now read command");
+        cx.shared.uart.read_command();
+        defmt::info!("Should be after");
     }
 
 

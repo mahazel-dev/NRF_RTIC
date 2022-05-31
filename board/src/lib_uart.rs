@@ -5,7 +5,7 @@ pub use crate::hal::uarte::Pins as UartPins;
 
 pub struct Uart(UART0);
 
-static mut UART_RX_FRAME: [u8; 6] = [0x31; 6];
+static mut UART_RX_FRAME: [u8; 6] = [0x36; 6];
 
 
 impl Uart {
@@ -142,14 +142,21 @@ impl Uart {
     }
 
 
-    // Read 6 bytes command
+    // Read 6 bytes command 
     pub fn read_command(&mut self)  {
-        self.transmit_frame(unsafe { UART_RX_FRAME } );
-        let x: [u8; 6] = [0x36; 6];
+        let mut x: [u8; 6] = [0x00; 6];
+        // Fire up transmitting data
+        self.0.tasks_startrx.write(|w| unsafe {w.bits(1)});
 
-        unsafe { UART_RX_FRAME = x };
- 
+        /// TO CHANGE
+        for i in 0..6   {
+            x[i] = self.read_byte();
+        }
+
+        unsafe { UART_RX_FRAME = x ;}
         self.transmit_frame(unsafe { UART_RX_FRAME } );
+        self.0.tasks_stoprx.write(|w| unsafe {w.bits(1)});
+
     }
 
     pub fn clear_rxdrdy(&mut self)  {
