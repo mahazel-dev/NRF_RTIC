@@ -18,4 +18,8 @@ impl Nfct   {
     pub fn field_detected(&mut self)   -> bool {
         self.0.events_fielddetected.read().events_fielddetected().bit()
     }
+
+    pub fn reset_events(&mut self)  {
+        self.0.events_fielddetected.reset();
+    }
 }

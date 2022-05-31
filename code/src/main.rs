@@ -1,10 +1,11 @@
-
-#![no_main]
 #![no_std]
+#![no_main]
 
 use rtic::app;
 use panic_probe as _;
 use defmt_rtt as _;
+
+static mut NFCCounter: u8 = 0;
 
 #[app(device = board, peripherals = false, dispatchers = [SWI0_EGU0,
                                                         SWI1_EGU1])] 
@@ -35,10 +36,8 @@ mod app {
     #[init]
     fn init(_ctx: init::Context) 
     -> (SharedResources, LocalResources, init::Monotonics) {
-        // rtt_init_print!();
         let my_board = board::init_board().unwrap();
-        defmt::println!("Board initialized\n----------");
-
+        defmt::info!("Board initialized\n----------");
 
         let clk = _ctx.core.SYST;
         let mono = Systick::new(clk, 64_000_000);
@@ -46,7 +45,8 @@ mod app {
         let leds = my_board.leds;
         let buttons = my_board.buttons;
         let uart = my_board.board_uart;
-        //let dmaBuffor = my_board.uarte_buffor;
+
+        defmt::info!("Peripherials turned on\n----------");
 
         let system_on = true;
         system_on::spawn_after(1.secs()).unwrap();
@@ -77,7 +77,7 @@ mod app {
     }
     #[task(local = [system_on])]
     fn system_on(cx: system_on::Context)    {
-        defmt::info!("system_on_fucntion");
+        defmt::trace!("system_on_function");
         if *cx.local.system_on  {
             system_diode::spawn_after(500.millis()).ok();
         }
@@ -96,38 +96,37 @@ mod app {
     }
 
         // Task for GPIOTE service
-        #[task(local = [buttons,
-            ],
-            shared = [leds,
-            uart,
-            ])]
-        fn debounce(cx: debounce::Context)  {
-            cx.shared.uart.transmit_str("\nEntered GPIOTE");
-            //defmt::
-            let buttons = cx.local.buttons;
-            let leds = cx.shared.leds;
-            let mut msg = "";
-            
-            if buttons._1.is_pushed() { leds._1.toggle();
-                msg = "\nLED1 toggled"
-            }
-            else if buttons._2.is_pushed() { leds._2.toggle(); 
-                msg = "\nLED2 toggled"}
-            else if buttons._3.is_pushed() { leds._3.toggle(); 
-                msg = "\nLED3 toggled"}
-            else if buttons._4.is_pushed() { leds._3.toggle(); 
-                msg = "\nButton 4 pushed"}
-    
-            cx.shared.uart.transmit_str(msg);
+    #[task(local = [buttons,
+        ],
+        shared = [leds,
+        uart,
+        ])]
+    fn debounce(cx: debounce::Context)  {
+        // Map resources
+        let buttons = cx.local.buttons;
+        let leds = cx.shared.leds;
+        let mut msg = "";
+        // Add contion for each port event
+        if buttons._1.is_pushed() { leds._1.toggle();
+            msg = "\nLED1 toggled"  // MAYBE ADD TO .lib defmt::trace???z
         }
+        else if buttons._2.is_pushed() { leds._2.toggle(); 
+            msg = "\nLED2 toggled"}
+        else if buttons._3.is_pushed() { leds._3.toggle(); 
+            msg = "\nLED3 toggled"}
+        else if buttons._4.is_pushed() { leds._3.toggle(); 
+            msg = "\nButton 4 pushed"}
+    }
+
 
     // Interrupt handler for NFCT
     #[task(binds = NFCT, local = [nfct])]
     fn nfc(cx: nfc::Context)   {
         let nfc = cx.local.nfct;
         if nfc.field_detected()  {
-            debounce::spawn_after(100.millis()).unwrap();
+            defmt::info!("Field detect interrupt entered:");
         }
+        nfc.reset_events();
     }
 
     // Interrupt handler for uart reception
@@ -136,13 +135,7 @@ mod app {
         let byte = cx.shared.uart.read_byte();
         cx.shared.uart.transmit_str("\nentered interrupt:__#\n");
         cx.shared.uart.transmit_byte(byte);
-        //match byte {
-        //    Some(byte) => cx.shared.uart.write_byte(byte),
-        //    None => cx.shared.uart.write_str("\nNone"),
-        //cx.shared.uart.clear_rxdrdy();
     }
 }
 
 
-#[cfg(test)]
-mod test {}
