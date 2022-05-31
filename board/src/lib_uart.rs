@@ -5,6 +5,7 @@ pub use crate::hal::uarte::Pins as UartPins;
 
 pub struct Uart(UART0);
 
+//static mut UART_RX_FRAME: Option<[u8; 6]> = None;
 
 
 impl Uart {
@@ -62,69 +63,85 @@ impl Uart {
         uart.enable.write(|w| w.enable().enabled());
 
         // Fire up receiving data
-        //uart.events_rxdrdy.reset();
         uart.intenset.write(|w| w.rxdrdy().set());
         uart.tasks_startrx.write(|w| unsafe {w.bits(1)});
         //uart.events_rxdrdy.write(|w| w.events_rxdrdy().set_bit().);
-        let _ = uart.rxd.read().bits() as u8;
         let u = Uart(uart);
         u
         
     }
 
-    /// FIX ITTTTTTT ***********
-    pub fn write_byte(&mut self, byte: u8)  {
-        self.0.txd.write(|w| unsafe { w.bits(u32::from(byte)) });
-    }
-
-    pub fn write_str(&mut self, string: &str)   {
+    pub fn transmit_byte(&mut self, byte: u8)  {
+        // Fire up transmitting data
         self.0.tasks_starttx.write(|w| unsafe { w.bits(1) });
 
+        // Send byte
+        self.0.txd.write(|w| unsafe { w.bits(u32::from(byte)) });
+
+        // Blocker
+        while self.0.events_txdrdy.read().bits() == 0   {}
+        
+        // Unlock event to be able to transmit next byte
+        self.0.events_txdrdy.reset();
+
+        // Stop transmitting data
+        self.0.tasks_stoptx.write(|w| unsafe { w.bits(1) });
+    }
+
+    pub fn transmit_str(&mut self, string: &str)   {
+        // Fire up transmitting data
+        self.0.tasks_starttx.write(|w| unsafe { w.bits(1) });
+
+        // Create slcie from string 
         let msg = string.as_bytes(); //.iter().map(|byte| byte + 1);
 
+        // Iterate string and send byte
         for sign in msg    {
-            self.write_byte(*sign);
+            // Send byte
+            self.0.txd.write(|w| unsafe { w.bits(u32::from(*sign)) });
+            // Blocker
             while self.0.events_txdrdy.read().bits() == 0   {}
+            // Unlock event to be able to transmit next byte
             self.0.events_txdrdy.reset();
         }
-        
+        // Stop transmitting data
         self.0.tasks_stoptx.write(|w| unsafe { w.bits(1) });
     }
 
 
-    pub fn write_frame(&mut self, frame: [u8; 6])   {
+    pub fn transmit_frame(&mut self, frame: [u8; 6])   {
+        // Fire up transmitting data
         self.0.tasks_starttx.write(|w| unsafe { w.bits(1) });
 
+        // Create buffor
         let msg = frame; //.iter().map(|byte| byte + 1);
 
-        for sign in msg    {
-            self.write_byte(sign);
+        // Iterate array and send byte
+        for byte in msg    {
+            // Send byte
+            self.0.txd.write(|w| unsafe { w.bits(u32::from(byte)) });
+            // Blocker
             while self.0.events_txdrdy.read().bits() == 0   {}
+            // Unlock event to be able to transmit next byte
             self.0.events_txdrdy.reset();
         }
-        
+        // Stop transmitting data
         self.0.tasks_stoptx.write(|w| unsafe { w.bits(1) });
     }
 
-    pub fn toggle_rxd(&mut self)    {
-        if self.0.intenset.read().rxdrdy().bit_is_set() {
-            self.0.intenset.write(|w| w.rxdrdy().clear_bit());
-            self.0.intenclr.write(|w| w.rxdrdy().set_bit());
-            self.0.tasks_startrx.write(|w| unsafe { w.bits(0) });
-            self.0.tasks_stoprx.write(|w| unsafe { w.bits(1) });
-        } else if self.0.intenclr.read().rxdrdy().bit_is_set() {
-            self.0.intenset.write(|w| w.rxdrdy().set_bit());
-            self.0.intenclr.write(|w| w.rxdrdy().clear_bit());
-            self.0.tasks_startrx.write(|w| unsafe { w.bits(1) });
-            self.0.tasks_stoprx.write(|w| unsafe { w.bits(0) });
-        }
-    }
-
+    // Read byte from UART reveceiver (from FIFO)
     pub fn read_byte(&mut self) -> u8 {
+        // Read byte from FIFO stack
         let byte = self.0.rxd.read().bits() as u8;
+        // Wait blocker
         self.wait_for_byte();
+        // Release event interrupt
+        self.clear_rxdrdy();
+        // Return byte
         byte
     }
+
+    //pub fn read_frame
 
     pub fn clear_rxdrdy(&mut self)  {
         self.0.events_rxdrdy.reset();

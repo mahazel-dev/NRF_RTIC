@@ -38,7 +38,7 @@ pub fn init_board()   -> Result<Device, ()>   {
         // 64MhZ external crystal, 32kHz external crystal sd
         unsafe { CLOCKS.get_or_insert(board_clocks) };
 
-        defmt::debug!("Initializing the board's peripherals");
+        //defmt::debug!("Initializing the board's peripherals");
 
         // ********** GPIO Configuration ********** 
         let pins = gpio::p0::Parts::new(periph.P0);
@@ -61,7 +61,7 @@ pub fn init_board()   -> Result<Device, ()>   {
         board_gpiote.port().input_pin(&button_1).low();
         board_gpiote.port().input_pin(&button_2).low();
         board_gpiote.port().input_pin(&button_3).low();
-        //board_gpiote.port().input_pin(&button_4).low();
+        board_gpiote.port().input_pin(&button_4).low();
         board_gpiote.port().enable_interrupt();
 
         // Blocker for button - to delete, LEARN Monotonics
@@ -188,7 +188,7 @@ impl Led    {
     /// Turns on LED 
     pub fn on(&mut self)    {
         
-        defmt::trace!(
+        /*defmt::trace!(
             "setting P{}.{} low (LED on)",
 
             if self.inner.port() == Port::Port1 {
@@ -197,7 +197,7 @@ impl Led    {
                 '0'
             },
             self.inner.pin()
-        );
+        );*/
         
         
         let _ = self.inner.set_low();
@@ -206,7 +206,7 @@ impl Led    {
     /// Turns off LED 
     pub fn off(&mut self)    {
         
-        defmt::trace!(
+        /*defmt::trace!(
             "setting P{}.{} low (LED on)",
 
             if self.inner.port() == Port::Port1 {
@@ -215,7 +215,7 @@ impl Led    {
                 '0'
             },
             self.inner.pin()
-        );
+        );*/
         
         let _ = self.inner.set_high();
     }
