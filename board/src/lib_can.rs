@@ -13,7 +13,7 @@ impl<T> CanProtocol<T>
 where
     T: Instance,
 {
-    pub fn transmit(&mut self, tx_buffor: *mut u32, tx_len: u16) ->  Result<(), Error>  {
+    pub fn transmit(&mut self, tx_buffor: u32, tx_len: u16) ->  Result<(), Error>  {
         if tx_len == 0 {
             return Err(Error::TxBufferTooSmall);
         }
@@ -25,19 +25,19 @@ where
         // We can only DMA out of RAM.
         //slice_in_ram_or(tx_buffer, Error::BufferNotInRAM)?;
 
-        defmt::debug!("Before start_transmit");
+        //defmt::debug!("Before start_transmit");
         self.start_transmit(tx_buffor, tx_len);
         // Wait for transmission to end.
         while self.0.events_endtx.read().bits() == 0 {
             // TODO: Do something here which uses less power. Like `wfi`.
         }
-        defmt::debug!("After start_transmit and loop");
+        //defmt::debug!("After start_transmit and loop");
 
 
         // Conservative compiler fence to prevent optimizations that do not
         // take in to account actions by DMA. The fence has been placed here,
         // after all possible DMA actions have completed.
-        //compiler_fence(SeqCst);
+        compiler_fence(SeqCst);
 
         // Reset the event
         self.0.events_txstopped.reset();
@@ -51,7 +51,7 @@ where
 
 
 
-    fn start_transmit(&mut self, tx_buffor: *mut u32, tx_len: u16) {
+    fn start_transmit(&mut self, tx_buffor: u32, tx_len: u16) {
         // Conservative compiler fence to prevent optimizations that do not
         // take in to account actions by DMA. The fence has been placed here,
         // before any DMA action has started.
@@ -63,9 +63,13 @@ where
 
 
         // Set up the DMA write.
-        self.0.txd.ptr.write(|w| unsafe { w.ptr().bits(*tx_buffor) });
+        self.0.txd.ptr.write(|w| unsafe { w.ptr().bits(tx_buffor) });
         // Set length of frame
         self.0.txd.maxcnt.write(|w|unsafe { w.maxcnt().bits(tx_len) });
+
+        // Start UARTE Transmit transaction.
+        self.0.tasks_starttx.write(|w| // `1` is a valid value to write to task registers.
+            unsafe { w.bits(1) });
     }
 
     fn stop_transmit(&mut self) {

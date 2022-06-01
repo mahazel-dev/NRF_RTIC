@@ -80,12 +80,15 @@ pub fn init_board()   -> Result<Device, ()>   {
             Parity::EXCLUDED,
             Baudrate::BAUD115200,
         );
-        //let dma_uarte = DmaUarteBuffor::new(4, 4);
+        //let dma_uarte = DmaCanBuffor::new(4, 4);
  
-        let dma_can = DmaUarteBuffor::new();
+        let dma_can = DmaBuffor::new();
         
         //unsafe {dma_uarte.TxBlock.write([0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31]);}
-        unsafe { *dma_can.tx_block = [0x0A, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37]};
+        //unsafe { *dma_can.tx_block = [0x0A, 0x31, 0x32, 0x33]; } //, 0x34, 0x35, 0x36, 0x37]};
+
+        unsafe {dma_can.ptr.CanTx.write([0x0A, 0x31, 0x32, 0x33]); }
+
 
         // ********** NFCT configuration Configuration **********
         let board_nfct = Nfct::new(periph.NFCT);
@@ -147,7 +150,7 @@ pub struct Device   {
     // Add NFCT feature
     pub board_nfct: Nfct,
     // DMA Handler
-    pub dma_can: DmaUarteBuffor,
+    pub dma_can: DmaBuffor,
 
 }
 
