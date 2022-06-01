@@ -1,5 +1,6 @@
 #![no_std]
 use nrf52840_hal as hal;
+use defmt_rtt as _;
 
 pub mod lib_gpiote;
 pub use lib_gpiote::*;
@@ -7,8 +8,8 @@ pub use lib_gpiote::*;
 pub mod lib_uart;
 pub use lib_uart::*;
 
-//pub mod board_uarte;
-//pub use board_uarte::*;
+pub mod lib_can;
+pub use lib_can::*;
 
 pub mod lib_dma;
 pub use lib_dma::*;
@@ -69,21 +70,7 @@ pub fn init_board()   -> Result<Device, ()>   {
 
         // ********** UARTE configuration Configuration **********
         // UARTE unwrap and basic configure
-        let board_uart = Uart::new(periph.UART0,
-            UartPins {
-                rxd: pins.p0_08.degrade().into_floating_input(),
-                txd: pins.p0_06.degrade().into_push_pull_output(gpio::Level::High),
-                cts: None,
-                rts: None,
-            },
-            Uart_Parity::EXCLUDED,
-            Uart_Baudrate::BAUD115200,
-        );
-
-        /*
-        // ********** UARTE configuration Configuration **********
-        // UARTE unwrap and basic configure
-        let uarte = Uarte::new(periph.UARTE0,
+        let board_can = CanProtocol::new(periph.UARTE0,
             hal::uarte::Pins {
                 rxd: pins.p0_08.degrade().into_floating_input(),
                 txd: pins.p0_06.degrade().into_push_pull_output(gpio::Level::High),
@@ -94,11 +81,11 @@ pub fn init_board()   -> Result<Device, ()>   {
             Baudrate::BAUD115200,
         );
         //let dma_uarte = DmaUarteBuffor::new(4, 4);
-        */
-        let dma_uarte = DmaUarteBuffor::new();
+ 
+        let dma_can = DmaUarteBuffor::new();
         
         //unsafe {dma_uarte.TxBlock.write([0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31]);}
-        //unsafe { *dma_uarte.TxBlock = [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38]};
+        unsafe { *dma_can.tx_block = [0x0A, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37]};
 
         // ********** NFCT configuration Configuration **********
         let board_nfct = Nfct::new(periph.NFCT);
@@ -126,13 +113,13 @@ pub fn init_board()   -> Result<Device, ()>   {
 
             board_gpiote: board_gpiote,
 
-            board_uart: board_uart,
+            //board_uart: board_uart,
 
             board_nfct: board_nfct,
 
-            //uarte_board: uarte,
+            board_can: board_can,
 
-            uarte_buffor: dma_uarte,
+            dma_can: dma_can,
 
         })
         
@@ -154,13 +141,13 @@ pub struct Device   {
     // Add GPIOTE feature
     pub board_gpiote: Gpiote,
     // Add Uart feature
-    pub board_uart: Uart,
+    //pub board_uart: Uart,
     // Add UARTE 
-    //pub uarte_board: Uarte<UARTE0>,
+    pub board_can: CanProtocol<UARTE0>,
     // Add NFCT feature
     pub board_nfct: Nfct,
     // DMA Handler
-    pub uarte_buffor: DmaUarteBuffor,
+    pub dma_can: DmaUarteBuffor,
 
 }
 

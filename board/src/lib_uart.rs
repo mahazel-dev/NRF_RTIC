@@ -5,9 +5,6 @@ pub use crate::hal::uarte::Pins as UartPins;
 
 pub struct Uart(UART0);
 
-static mut UART_RX_FRAME: [u8; 6] = [0x36; 6];
-
-
 impl Uart {
     pub fn new(uart: UART0, mut pins: UartPins, parity: Uart_Parity, baudrate: Uart_Baudrate) -> Self    {
         
@@ -64,7 +61,7 @@ impl Uart {
 
         // Fire up receiving data
         uart.intenset.write(|w| w.rxdrdy().set());
-        //uart.tasks_startrx.write(|w| unsafe {w.bits(1)});
+        uart.tasks_startrx.write(|w| unsafe {w.bits(1)});
 
         let u = Uart(uart);
         u
@@ -130,36 +127,41 @@ impl Uart {
     }
 
     // Read byte from UART reveceiver (from FIFO)
-    pub fn read_byte(&mut self) -> u8 {
-        // Read byte from FIFO stack
-        let byte = self.0.rxd.read().bits() as u8;
-        // Wait blocker
+    pub fn read_byte(&mut self) -> u8 {        // Wait blocker
         self.wait_for_byte();
         // Release event interrupt
-        self.clear_rxdrdy();
+        self.rxdrdy_reset();
+        // Read byte from FIFO stack
+        let byte = self.0.rxd.read().bits() as u8;
         // Return byte
         byte
     }
 
-
     // Read 6 bytes command 
     pub fn read_command(&mut self)  {
         let mut x: [u8; 6] = [0x00; 6];
-        // Fire up transmitting data
-        self.0.tasks_startrx.write(|w| unsafe {w.bits(1)});
-
-        /// TO CHANGE
-        for i in 0..6   {
+        // TO CHANGE
+        for i in 0..6  {
             x[i] = self.read_byte();
         }
 
-        unsafe { UART_RX_FRAME = x ;}
-        self.transmit_frame(unsafe { UART_RX_FRAME } );
-        self.0.tasks_stoprx.write(|w| unsafe {w.bits(1)});
-
+        //self.rxdrdy_reset();
+        //unsafe { UART_RX_FRAME = &x ;}
+        self.transmit_frame( x );
     }
 
-    pub fn clear_rxdrdy(&mut self)  {
+    pub fn start_rx(&mut self)  {
+        self.0.intenset.write(|w| w.rxdrdy().set());
+        // Fire up transmitting data
+        self.0.tasks_startrx.write(|w| unsafe {w.bits(1)});
+    }
+
+    pub fn stop_rx(&mut self)  {
+        // Fire up transmitting data
+        self.0.tasks_stoprx.write(|w| unsafe {w.bits(1)});
+    }
+
+    pub fn rxdrdy_reset(&mut self)  {
         self.0.events_rxdrdy.reset();
     }
 
