@@ -1,6 +1,5 @@
 use nrf52840_hal::prelude::OutputPin;
 
-//pub use crate::hal::Uarte;
 pub use crate::hal::uarte::*;
 pub use crate::hal::pac::{uarte0, UARTE0};
 use crate::hal::target_constants::EASY_DMA_SIZE;
@@ -42,6 +41,7 @@ where
         // Reset the event
         self.0.events_txstopped.reset();
 
+        // Stop transmit and return Result Ok
         self.stop_transmit();
 
         Ok(())
@@ -52,9 +52,6 @@ where
 
 
     fn start_transmit(&mut self, tx_buffor: u32, tx_len: u16) {
-        // Conservative compiler fence to prevent optimizations that do not
-        // take in to account actions by DMA. The fence has been placed here,
-        // before any DMA action has started.
         compiler_fence(SeqCst);
 
         // Reset the events.
@@ -73,6 +70,7 @@ where
     }
 
     fn stop_transmit(&mut self) {
+        // Stop transmit
         self.0.tasks_stoptx.write(|w| unsafe { w.bits(1) });
 
         // Wait for transmitter is stopped.

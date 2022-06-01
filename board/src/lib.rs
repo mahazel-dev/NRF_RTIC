@@ -82,12 +82,12 @@ pub fn init_board()   -> Result<Device, ()>   {
         );
         //let dma_uarte = DmaCanBuffor::new(4, 4);
  
-        let dma_can = DmaBuffor::new();
+        let board_dma = DmaBuffor::new();
         
         //unsafe {dma_uarte.TxBlock.write([0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31]);}
         //unsafe { *dma_can.tx_block = [0x0A, 0x31, 0x32, 0x33]; } //, 0x34, 0x35, 0x36, 0x37]};
 
-        unsafe {dma_can.ptr.CanTx.write([0x0A, 0x31, 0x32, 0x33]); }
+        unsafe {board_dma.ptr.can_tx.write([0x0A, 0x31, 0x32, 0x33]); }
 
 
         // ********** NFCT configuration Configuration **********
@@ -116,13 +116,11 @@ pub fn init_board()   -> Result<Device, ()>   {
 
             board_gpiote: board_gpiote,
 
-            //board_uart: board_uart,
-
             board_nfct: board_nfct,
 
             board_can: board_can,
 
-            dma_can: dma_can,
+            board_dma: board_dma,
 
         })
         
@@ -150,7 +148,7 @@ pub struct Device   {
     // Add NFCT feature
     pub board_nfct: Nfct,
     // DMA Handler
-    pub dma_can: DmaBuffor,
+    pub board_dma: DmaBuffor,
 
 }
 

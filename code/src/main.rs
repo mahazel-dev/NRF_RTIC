@@ -105,6 +105,7 @@ mod app {
         if buttons._1.is_pushed() { leds._1.toggle();
             defmt::info!("button1 pushed");
             cx.local.can_protocol.transmit(0x2000_0000, 4).unwrap();
+
         }
             //cx.shared.uart.read_command();}
         else if buttons._2.is_pushed() { leds._2.toggle();
