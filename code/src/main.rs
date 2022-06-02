@@ -133,6 +133,7 @@ mod app {
 
         if cx.shared.uarte.is_cts() {
             defmt::debug!("entered cts interrupt");
+<<<<<<< HEAD
             cx.shared.uarte.clear_cts_event();
             cx.shared.uarte.receive(0x2000_0000, 4).unwrap();
             defmt::debug!("Left interrupt");
@@ -142,6 +143,12 @@ mod app {
         if cx.shared.uarte.is_ncts() {
             defmt::debug!("entered ncts interrupt");
         }
+=======
+            cx.shared.uarte.receive(0x2000_0000, 4);
+            defmt::debug!("Left interrupt");
+            //uarte.clear_cts_event();
+        }
+>>>>>>> 851585b1b777a9b7e2be8a6f7cd2bebc9057a27c
 
     }
 }

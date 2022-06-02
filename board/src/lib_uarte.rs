@@ -18,7 +18,10 @@ where
 
     pub fn clear_cts_event(&mut self)   {
         self.0.events_cts.reset();
+<<<<<<< HEAD:board/src/lib_uarte.rs
         while self.0.events_cts.read().events_cts().bit_is_set() == true  {}
+=======
+>>>>>>> 851585b1b777a9b7e2be8a6f7cd2bebc9057a27c:board/src/lib_can.rs
     }
 
     pub fn is_ncts(&mut self) -> bool    {
@@ -96,7 +99,11 @@ where
     /// Finalize a UARTE read transaction by clearing the event.
     fn finalize_receive(&mut self) {
     // Reset the event, otherwise it will always read `1` from now on.
+<<<<<<< HEAD:board/src/lib_uarte.rs
     self.0.events_endrx.write(|w| w.events_endrx().clear_bit());
+=======
+    self.0.events_endrx.write(|w| w);
+>>>>>>> 851585b1b777a9b7e2be8a6f7cd2bebc9057a27c:board/src/lib_can.rs
 
     // Conservative compiler fence to prevent optimizations that do not
     // take in to account actions by DMA. The fence has been placed here,
@@ -230,7 +237,10 @@ where
         u.0.inten.write(|w| w.cts().enabled());
         u.0.inten.write(|w| w.ncts().enabled());
 
+<<<<<<< HEAD:board/src/lib_uarte.rs
 
+=======
+>>>>>>> 851585b1b777a9b7e2be8a6f7cd2bebc9057a27c:board/src/lib_can.rs
         u
 
     }

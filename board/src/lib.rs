@@ -76,7 +76,11 @@ pub fn init_board()   -> Result<Device, ()>   {
             hal::uarte::Pins {
                 rxd: pins.p0_08.degrade().into_floating_input(),
                 txd: pins.p0_06.degrade().into_push_pull_output(gpio::Level::High),
+<<<<<<< HEAD
                 cts: Some(pins.p0_07.degrade().into_floating_input()),
+=======
+                cts: Some(pins.p0_04.degrade().into_floating_input()),
+>>>>>>> 851585b1b777a9b7e2be8a6f7cd2bebc9057a27c
                 //cts: None,
                 rts: Some(pins.p0_05.degrade().into_push_pull_output(gpio::Level::High)),
             },
