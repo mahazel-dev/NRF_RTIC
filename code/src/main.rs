@@ -19,7 +19,6 @@ mod app {
         buttons: Buttons,
         system_on: bool,
         nfct: Nfct,
-        can_protocol: CanProtocol<UARTE0>,
     }
 
     #[shared]
@@ -28,6 +27,8 @@ mod app {
         leds: Leds,
         #[lock_free]
         gpiote: Gpiote,
+        #[lock_free]
+        uarte: Uarte<UARTE0>,
     }
 
     #[init]
@@ -42,7 +43,7 @@ mod app {
         let leds = my_board.leds;
         let buttons = my_board.buttons;
 
-        let can_protocol = my_board.board_can;
+        let uarte = my_board.board_uarte;
 
         defmt::info!("Peripherials turned on\n----------");
 
@@ -53,12 +54,12 @@ mod app {
             SharedResources {
                 gpiote: my_board.board_gpiote,
                 leds: leds,
+                uarte: uarte
             },
             LocalResources  {
                 system_on,
                 buttons: buttons,
                 nfct: my_board.board_nfct,
-                can_protocol,
                 //uarte: my_board.uarte_board,
             },
             init::Monotonics(mono),
@@ -93,9 +94,9 @@ mod app {
 
     // Task for GPIOTE service
     #[task(local = [buttons,
-        can_protocol,
         ],
         shared = [leds,
+        uarte,
         ])]
     fn debounce(cx: debounce::Context)  {
         // Map resources
@@ -104,7 +105,7 @@ mod app {
         // Add condition for each port event
         if buttons._1.is_pushed() { leds._1.toggle();
             defmt::info!("button1 pushed");
-            cx.local.can_protocol.transmit(0x2000_0000, 4).unwrap();
+            cx.shared.uarte.transmit(0x2000_0000, 4).unwrap();
 
         }
             //cx.shared.uart.read_command();}
@@ -126,8 +127,23 @@ mod app {
     }
 
     // Interrupt handler for uart reception
-    //#[task(binds = UARTE0_UART0, shared = [uart])]
+    #[task(binds = UARTE0_UART0, shared = [uarte])]
+    fn uarte(cx: uarte::Context)    {
+        //let uarte = cx.shared.uarte;
 
+        if cx.shared.uarte.is_cts() {
+            defmt::debug!("entered cts interrupt");
+            cx.shared.uarte.clear_cts_event();
+            cx.shared.uarte.receive(0x2000_0000, 4).unwrap();
+            defmt::debug!("Left interrupt");
+            //uarte.clear_cts_event();
+        }
+        
+        if cx.shared.uarte.is_ncts() {
+            defmt::debug!("entered ncts interrupt");
+        }
+
+    }
 }
 
 

@@ -8,8 +8,8 @@ pub use lib_gpiote::*;
 pub mod lib_uart;
 pub use lib_uart::*;
 
-pub mod lib_can;
-pub use lib_can::*;
+pub mod lib_uarte;
+pub use lib_uarte::*;
 
 pub mod lib_dma;
 pub use lib_dma::*;
@@ -65,21 +65,33 @@ pub fn init_board()   -> Result<Device, ()>   {
         board_gpiote.port().input_pin(&button_4).low();
         board_gpiote.port().enable_interrupt();
 
+ 
+
         // Blocker for button - to delete, LEARN Monotonics
         let blocker = hal::Timer::one_shot(periph.TIMER0);
 
         // ********** UARTE configuration Configuration **********
         // UARTE unwrap and basic configure
-        let board_can = CanProtocol::new(periph.UARTE0,
+        let board_uarte = Uarte::new(periph.UARTE0,
             hal::uarte::Pins {
                 rxd: pins.p0_08.degrade().into_floating_input(),
                 txd: pins.p0_06.degrade().into_push_pull_output(gpio::Level::High),
-                cts: None,
-                rts: None,
+                cts: Some(pins.p0_07.degrade().into_floating_input()),
+                //cts: None,
+                rts: Some(pins.p0_05.degrade().into_push_pull_output(gpio::Level::High)),
             },
             Parity::EXCLUDED,
             Baudrate::BAUD115200,
         );
+        /*
+        board_gpiote.channel0()
+            .input_pin(&pins .p0_08.degrade().into_floating_input())
+            .hi_to_lo()
+            .enable_interrupt();
+
+        let ppi = hal::ppi::Parts::new(periph.PPI).ppi0;
+        */
+
         //let dma_uarte = DmaCanBuffor::new(4, 4);
  
         let board_dma = DmaBuffor::new();
@@ -87,7 +99,7 @@ pub fn init_board()   -> Result<Device, ()>   {
         //unsafe {dma_uarte.TxBlock.write([0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31]);}
         //unsafe { *dma_can.tx_block = [0x0A, 0x31, 0x32, 0x33]; } //, 0x34, 0x35, 0x36, 0x37]};
 
-        unsafe {board_dma.ptr.can_tx.write([0x0A, 0x31, 0x32, 0x33]); }
+        unsafe {board_dma.ptr.uarte_tx.write([0x0A, 0x31, 0x32, 0x33]); }
 
 
         // ********** NFCT configuration Configuration **********
@@ -118,7 +130,7 @@ pub fn init_board()   -> Result<Device, ()>   {
 
             board_nfct: board_nfct,
 
-            board_can: board_can,
+            board_uarte: board_uarte,
 
             board_dma: board_dma,
 
@@ -144,7 +156,7 @@ pub struct Device   {
     // Add Uart feature
     //pub board_uart: Uart,
     // Add UARTE 
-    pub board_can: CanProtocol<UARTE0>,
+    pub board_uarte: Uarte<UARTE0>,
     // Add NFCT feature
     pub board_nfct: Nfct,
     // DMA Handler

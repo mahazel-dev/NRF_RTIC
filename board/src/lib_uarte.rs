@@ -6,12 +6,106 @@ use crate::hal::target_constants::EASY_DMA_SIZE;
 
 use core::sync::atomic::{compiler_fence, Ordering::SeqCst};
 
-pub struct CanProtocol<T>(T);
+pub struct Uarte<T>(T);
 
-impl<T> CanProtocol<T>
+impl<T> Uarte<T>
 where
     T: Instance,
 {
+    pub fn is_cts(&mut self) -> bool    {
+        self.0.events_cts.read().events_cts().bit_is_set()
+    }
+
+    pub fn clear_cts_event(&mut self)   {
+        self.0.events_cts.reset();
+        while self.0.events_cts.read().events_cts().bit_is_set() == true  {}
+    }
+
+    pub fn is_ncts(&mut self) -> bool    {
+        self.0.events_ncts.read().events_ncts().bit_is_set()
+    }
+
+    pub fn clear_ncts_event(&mut self)   {
+        self.0.events_ncts.reset();
+    }
+
+    pub fn receive(&mut self, rx_buffor: u32, rx_len: u8) -> Result<(), Error> {
+        self.start_receive(rx_buffor, rx_len)?;
+
+        // Wait for transmission to end.
+        while self.0.events_endrx.read().bits() == 0 {}
+
+        self.finalize_receive();
+
+        /*
+        if self.0.rxd.amount.read().bits() != rx_buffer.len() as u32 {
+            return Err(Error::Receive);
+        }
+        */
+
+        Ok(())
+    }
+/// Start a UARTE read transaction by setting the control
+/// values and triggering a read task.
+    fn start_receive(&mut self, rx_buffor: u32, rx_len: u8) -> Result<(), Error> {
+        if rx_len == 0 {
+            return Err(Error::RxBufferTooSmall);
+        }
+    
+        if *&rx_len as usize > EASY_DMA_SIZE {
+            return Err(Error::RxBufferTooLong);
+        }
+
+        compiler_fence(SeqCst);
+
+        // Set up the DMA read
+        self.0.rxd.ptr.write(|w| unsafe { 
+            w.ptr().bits(rx_buffor) }); 
+        self.0.rxd.maxcnt.write(|w|unsafe {
+            w.maxcnt().bits(rx_len as u16)  });
+    
+        // Start UARTE Receive transaction.
+        self.0.tasks_startrx.write(|w|
+                // `1` is a valid value to write to task registers.
+                unsafe { w.bits(1) });
+
+        Ok(())
+
+    }
+
+    /// Stop an unfinished UART read transaction and flush FIFO to DMA buffer.
+    fn cancel_receive(&mut self) {
+        // Stop reception.
+        self.0.tasks_stoprx.write(|w| unsafe { w.bits(1) });
+
+        // Wait for the reception to have stopped.
+        while self.0.events_rxto.read().bits() == 0 {}
+
+        // Reset the event flag.
+        self.0.events_rxto.write(|w| w);
+
+        // Ask UART to flush FIFO to DMA buffer.
+        self.0.tasks_flushrx.write(|w| unsafe { w.bits(1) });
+
+        // Wait for the flush to complete.
+        while self.0.events_endrx.read().bits() == 0 {}
+
+        // The event flag itself is later reset by `finalize_read`.
+    }
+
+    /// Finalize a UARTE read transaction by clearing the event.
+    fn finalize_receive(&mut self) {
+    // Reset the event, otherwise it will always read `1` from now on.
+    self.0.events_endrx.write(|w| w.events_endrx().clear_bit());
+
+    // Conservative compiler fence to prevent optimizations that do not
+    // take in to account actions by DMA. The fence has been placed here,
+    // after all possible DMA actions have completed.
+    compiler_fence(SeqCst);
+}
+
+
+
     pub fn transmit(&mut self, tx_buffor: u32, tx_len: u16) ->  Result<(), Error>  {
         if tx_len == 0 {
             return Err(Error::TxBufferTooSmall);
@@ -24,19 +118,19 @@ where
         // We can only DMA out of RAM.
         //slice_in_ram_or(tx_buffer, Error::BufferNotInRAM)?;
 
-        //defmt::debug!("Before start_transmit");
         self.start_transmit(tx_buffor, tx_len);
+
         // Wait for transmission to end.
         while self.0.events_endtx.read().bits() == 0 {
             // TODO: Do something here which uses less power. Like `wfi`.
         }
-        //defmt::debug!("After start_transmit and loop");
 
-
+        
         // Conservative compiler fence to prevent optimizations that do not
         // take in to account actions by DMA. The fence has been placed here,
         // after all possible DMA actions have completed.
         compiler_fence(SeqCst);
+
 
         // Reset the event
         self.0.events_txstopped.reset();
@@ -48,8 +142,6 @@ where
 
 
     }
-
-
 
     fn start_transmit(&mut self, tx_buffor: u32, tx_len: u16) {
         compiler_fence(SeqCst);
@@ -130,14 +222,19 @@ where
         // Configure frequency.
         uarte.baudrate.write(|w| w.baudrate().variant(baudrate));
 
-        let mut u = CanProtocol(uarte);
+        let mut u = Uarte(uarte);
 
         // Enable UARTE instance.
         u.0.enable.write(|w| w.enable().enabled());
 
+        u.0.inten.write(|w| w.cts().enabled());
+        u.0.inten.write(|w| w.ncts().enabled());
+
+
         u
 
     }
+
 
 
 }
