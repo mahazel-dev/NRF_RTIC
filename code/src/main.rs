@@ -5,6 +5,7 @@ use rtic::app;
 use panic_probe as _;
 use defmt_rtt as _;
 
+
 #[app(device = board, peripherals = false, dispatchers = [SWI0_EGU0,
                                                         SWI1_EGU1])] 
 mod app {
@@ -89,6 +90,11 @@ mod app {
         if cx.shared.gpiote.port().is_event_triggered() {
             debounce::spawn().unwrap();
         }
+
+        if cx.shared.gpiote.channel0().is_event_triggered() {
+            defmt::debug!("Dziala");
+            debounce::spawn().unwrap();
+        }
         cx.shared.gpiote.reset_events();
     }
 
@@ -113,6 +119,7 @@ mod app {
             defmt::info!("button2 pushed");}
         else if buttons._3.is_pushed() { leds._3.toggle();}
         else if buttons._4.is_pushed() { leds._3.toggle();}
+        leds._1.toggle();
     }
 
 
@@ -133,22 +140,17 @@ mod app {
 
         if cx.shared.uarte.is_cts() {
             defmt::debug!("entered cts interrupt");
-<<<<<<< HEAD
-            cx.shared.uarte.clear_cts_event();
+            //cx.shared.uarte.clear_cts_event();
             cx.shared.uarte.receive(0x2000_0000, 4).unwrap();
             defmt::debug!("Left interrupt");
             //uarte.clear_cts_event();
         }
         
         if cx.shared.uarte.is_ncts() {
-            defmt::debug!("entered ncts interrupt");
+            defmt::debug!("entered endrx interrupt");
+            cx.shared.uarte.finalize_receive();
+            cx.shared.uarte.clear_cts_event();
         }
-=======
-            cx.shared.uarte.receive(0x2000_0000, 4);
-            defmt::debug!("Left interrupt");
-            //uarte.clear_cts_event();
-        }
->>>>>>> 851585b1b777a9b7e2be8a6f7cd2bebc9057a27c
 
     }
 }

@@ -1,12 +1,15 @@
+/*
 use crate::hal::prelude::*;
 pub use crate::hal::pac::{uart0, UART0};
 pub use uart0::{baudrate::BAUDRATE_A as Uart_Baudrate, config::PARITY_A as Uart_Parity};
-pub use crate::hal::uarte::Pins as UartPins;
+//pub use crate::hal::uarte::Pins as UartPins;
+
+pub use crate::hal::gpio::{ Pin, Output, Input, Floating, PullUp};
 
 pub struct Uart(UART0);
 
 impl Uart {
-    pub fn new(uart: UART0, mut pins: UartPins, parity: Uart_Parity, baudrate: Uart_Baudrate) -> Self    {
+    pub fn new(uart: UART0, mut pins: Pins, parity: Uart_Parity, baudrate: Uart_Baudrate) -> Self    {
         
         // Is the UART already on? It might be if you had a bootloader
         if uart.enable.read().bits() != 0 {
@@ -170,6 +173,13 @@ impl Uart {
     }
 }
 
+pub struct Pins {
+    pub rxd: Pin<Input<Floating>>,
+    pub txd: Pin<Output<PushPull>>,
+    pub cts: Option<Pin<Input<PullUp>>>,
+    pub rts: Option<Pin<Output<PushPull>>>,
+}
 
 
+*/
 

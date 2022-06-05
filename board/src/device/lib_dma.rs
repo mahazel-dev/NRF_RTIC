@@ -1,7 +1,7 @@
 pub static UARTE_TX_BUF_DEF: u32 = 0x2000_0000;
 pub const UARTE_TX_BUF_MAXLEN: u16 = 4;
 
-pub static UARTE_RX_BUF_DEF: u32 = (0x2000_0040 + 0x01 * UARTE_RX_BUF_MAXLEN as u32);
+pub static UARTE_RX_BUF_DEF: u32 = 0x2000_0040 + 0x01 * UARTE_RX_BUF_MAXLEN as u32;
 pub const UARTE_RX_BUF_MAXLEN: u8 = 8;
 
 

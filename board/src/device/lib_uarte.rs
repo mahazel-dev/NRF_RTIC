@@ -1,10 +1,11 @@
-use nrf52840_hal::prelude::OutputPin;
+use crate::hal_main as hal;
+use hal::prelude::OutputPin;
 
-pub use crate::hal::uarte::*;
-pub use crate::hal::pac::{uarte0, UARTE0};
-use crate::hal::target_constants::EASY_DMA_SIZE;
-
+use hal::target_constants::EASY_DMA_SIZE;
 use core::sync::atomic::{compiler_fence, Ordering::SeqCst};
+
+pub use hal::uarte::*;
+pub use hal::pac::{uarte0, UARTE0};
 
 pub struct Uarte<T>(T);
 
@@ -18,19 +19,15 @@ where
 
     pub fn clear_cts_event(&mut self)   {
         self.0.events_cts.reset();
-<<<<<<< HEAD:board/src/lib_uarte.rs
         while self.0.events_cts.read().events_cts().bit_is_set() == true  {}
-=======
->>>>>>> 851585b1b777a9b7e2be8a6f7cd2bebc9057a27c:board/src/lib_can.rs
     }
 
     pub fn is_ncts(&mut self) -> bool    {
-        self.0.events_ncts.read().events_ncts().bit_is_set()
+        //self.0.events_ncts.read().events_ncts().bit_is_set()
+
+        self.0.events_endrx.read().events_endrx().bit_is_set()
     }
 
-    pub fn clear_ncts_event(&mut self)   {
-        self.0.events_ncts.reset();
-    }
 
     pub fn receive(&mut self, rx_buffor: u32, rx_len: u8) -> Result<(), Error> {
         self.start_receive(rx_buffor, rx_len)?;
@@ -38,7 +35,7 @@ where
         // Wait for transmission to end.
         while self.0.events_endrx.read().bits() == 0 {}
 
-        self.finalize_receive();
+        // ******* self.finalize_receive();
 
         /*
         if self.0.rxd.amount.read().bits() != rx_buffer.len() as u32 {
@@ -97,13 +94,9 @@ where
     }
 
     /// Finalize a UARTE read transaction by clearing the event.
-    fn finalize_receive(&mut self) {
+    pub fn finalize_receive(&mut self) {
     // Reset the event, otherwise it will always read `1` from now on.
-<<<<<<< HEAD:board/src/lib_uarte.rs
     self.0.events_endrx.write(|w| w.events_endrx().clear_bit());
-=======
-    self.0.events_endrx.write(|w| w);
->>>>>>> 851585b1b777a9b7e2be8a6f7cd2bebc9057a27c:board/src/lib_can.rs
 
     // Conservative compiler fence to prevent optimizations that do not
     // take in to account actions by DMA. The fence has been placed here,
@@ -229,18 +222,15 @@ where
         // Configure frequency.
         uarte.baudrate.write(|w| w.baudrate().variant(baudrate));
 
-        let mut u = Uarte(uarte);
+        let u = Uarte(uarte);
 
         // Enable UARTE instance.
         u.0.enable.write(|w| w.enable().enabled());
 
-        u.0.inten.write(|w| w.cts().enabled());
-        u.0.inten.write(|w| w.ncts().enabled());
+        u.0.intenset.write(|w| w.cts().set());
+        u.0.intenset.write(|w| w.ncts().set());
 
-<<<<<<< HEAD:board/src/lib_uarte.rs
 
-=======
->>>>>>> 851585b1b777a9b7e2be8a6f7cd2bebc9057a27c:board/src/lib_can.rs
         u
 
     }
@@ -249,6 +239,13 @@ where
 
 }
 
+pub use hal::gpio::{ Pin, Output, Input, Floating, PullUp, PushPull};
+pub struct Pins {
+    pub rxd: Pin<Input<Floating>>,
+    pub txd: Pin<Output<PushPull>>,
+    pub cts: Option<Pin<Input<PullUp>>>,
+    pub rts: Option<Pin<Output<PushPull>>>,
+}
 
 
 /*
