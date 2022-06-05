@@ -2,7 +2,8 @@
 
 Hello everyone,
 
-It is my project of self-learning Rust on Embedded Devices. I work on NRF52840DK (Cortec M4 with NFC and BLE).
+It is my project of self-learning Rust on Embedded Devices. Purpose of this project to get familair with embedded programming in modern enviroment.
+I work on NRF52840DK (Cortex M4 with NFC and BLE).
 What I want to achieve:
   - UART communication PC-uC with interrupt trigger - almost DONE
   - usage of OLED via I2C - display SSD1306 oredred;
@@ -13,8 +14,11 @@ What I want to achieve:
 
 I use RTIC as main event handler, because it sound interesting for me.
 By the time code is growing and getting mroe complicated, but I try to keep it.
-I'm not professional, but I'd like to become. If you have suggestions, please don;t hesitate to tell me. Or if you can offer help with learning 
+I'm not professional, but I'd like to become. If you have suggestions, please don't hesitate to tell me. Or if you can offer help with learning 
 by giving assigments or intern I'm open for every opportunity.
 
 
-Besr regards and welcome to Rust and RTIC
+Best regards and welcome to Rust and RTIC
+
+
+Materials:
