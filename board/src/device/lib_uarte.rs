@@ -1,11 +1,12 @@
 use crate::hal_main as hal;
-use hal::prelude::OutputPin;
-
-use hal::target_constants::EASY_DMA_SIZE;
-use core::sync::atomic::{compiler_fence, Ordering::SeqCst};
 
 pub use hal::uarte::*;
 pub use hal::pac::{uarte0, UARTE0};
+
+use hal::prelude::OutputPin;
+use hal::target_constants::EASY_DMA_SIZE;
+use core::sync::atomic::{compiler_fence, Ordering::SeqCst};
+
 
 pub struct Uarte<T>(T);
 
@@ -35,7 +36,7 @@ where
         // Wait for transmission to end.
         while self.0.events_endrx.read().bits() == 0 {}
 
-        // ******* self.finalize_receive();
+        self.finalize_receive();
 
         /*
         if self.0.rxd.amount.read().bits() != rx_buffer.len() as u32 {
@@ -194,7 +195,7 @@ where
             w.connect().connected()
         });
 
-        // Optional pins
+        // Optional pin CTS 
         uarte.psel.cts.write(|w| {
             if let Some(ref pin) = pins.cts {
                 unsafe { w.bits(pin.psel_bits()) };
@@ -204,6 +205,7 @@ where
             }
         });
 
+        // Optional pin RTS
         uarte.psel.rts.write(|w| {
             if let Some(ref pin) = pins.rts {
                 unsafe { w.bits(pin.psel_bits()) };
@@ -228,8 +230,7 @@ where
         u.0.enable.write(|w| w.enable().enabled());
 
         u.0.intenset.write(|w| w.cts().set());
-        u.0.intenset.write(|w| w.ncts().set());
-
+        //u.0.intenset.write(|w| w.ncts().set());
 
         u
 

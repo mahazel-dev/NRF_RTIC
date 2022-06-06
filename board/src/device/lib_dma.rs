@@ -10,7 +10,7 @@ use volatile_register::*;
 #[repr(C)]
 pub struct DmaBufforBlock   {
     pub uarte_tx: RW<[u8; UARTE_TX_BUF_MAXLEN as usize]>,
-    //pub uarte_rx: RW<[u8; UARTE_RX_BUF_MAXLEN as usize]>,
+    pub uarte_rx: RW<[u8; UARTE_RX_BUF_MAXLEN as usize]>,
 }
 
 pub struct DmaBuffor    {

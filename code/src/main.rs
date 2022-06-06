@@ -9,7 +9,7 @@ use defmt_rtt as _;
 #[app(device = board, peripherals = false, dispatchers = [SWI0_EGU0,
                                                         SWI1_EGU1])] 
 mod app {
-    use board::*;
+    use board::{*, UARTE_RX_BUF_DEF, UARTE_RX_BUF_MAXLEN};
     use systick_monotonic::*;
 
     #[monotonic(binds = SysTick, default = true)]    
@@ -123,6 +123,25 @@ mod app {
     }
 
 
+
+
+    // Interrupt handler for Uarte reception
+    #[task(binds = UARTE0_UART0, shared = [uarte])]
+    fn uarte_receive(cx: uarte_receive::Context)    {
+        if cx.shared.uarte.is_cts() {
+            defmt::debug!("Entered cts interrupt");
+            cx.shared.uarte.receive(UARTE_RX_BUF_DEF, UARTE_RX_BUF_MAXLEN).unwrap();
+            cx.shared.uarte.clear_cts_event();
+            defmt::debug!("Left interrupt");
+        }
+    }
+
+    // Transmit UARTE frame
+    #[task(shared = [uarte])]
+    fn uarte_transmit(cx: uarte_transmit::Context)    {
+        cx.shared.uarte.transmit(UARTE_TX_BUF_DEF, UARTE_TX_BUF_MAXLEN);
+    }
+
     // Interrupt handler for NFCT
     #[task(binds = NFCT, local = [nfct])]
     fn nfc(cx: nfc::Context)   {
@@ -133,26 +152,7 @@ mod app {
         nfc.reset_events();
     }
 
-    // Interrupt handler for uart reception
-    #[task(binds = UARTE0_UART0, shared = [uarte])]
-    fn uarte(cx: uarte::Context)    {
-        //let uarte = cx.shared.uarte;
 
-        if cx.shared.uarte.is_cts() {
-            defmt::debug!("entered cts interrupt");
-            //cx.shared.uarte.clear_cts_event();
-            cx.shared.uarte.receive(0x2000_0000, 4).unwrap();
-            defmt::debug!("Left interrupt");
-            //uarte.clear_cts_event();
-        }
-        
-        if cx.shared.uarte.is_ncts() {
-            defmt::debug!("entered endrx interrupt");
-            cx.shared.uarte.finalize_receive();
-            cx.shared.uarte.clear_cts_event();
-        }
-
-    }
 }
 
 
