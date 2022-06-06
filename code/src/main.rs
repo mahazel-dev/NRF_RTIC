@@ -90,11 +90,6 @@ mod app {
         if cx.shared.gpiote.port().is_event_triggered() {
             debounce::spawn().unwrap();
         }
-
-        if cx.shared.gpiote.channel0().is_event_triggered() {
-            defmt::debug!("Dziala");
-            debounce::spawn().unwrap();
-        }
         cx.shared.gpiote.reset_events();
     }
 
@@ -112,14 +107,13 @@ mod app {
         if buttons._1.is_pushed() { leds._1.toggle();
             defmt::info!("button1 pushed");
             cx.shared.uarte.transmit(0x2000_0000, 4).unwrap();
-
+        } else if buttons._2.is_pushed() { leds._2.toggle();
+            defmt::info!("button2 pushed");
+        } else if buttons._3.is_pushed() { leds._3.toggle();
+            defmt::info!("button3 pushed");
+        } else if buttons._4.is_pushed() { leds._3.toggle();
+            defmt::info!("button4 pushed");
         }
-            //cx.shared.uart.read_command();}
-        else if buttons._2.is_pushed() { leds._2.toggle();
-            defmt::info!("button2 pushed");}
-        else if buttons._3.is_pushed() { leds._3.toggle();}
-        else if buttons._4.is_pushed() { leds._3.toggle();}
-        leds._1.toggle();
     }
 
 

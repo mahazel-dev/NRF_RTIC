@@ -77,23 +77,10 @@ pub fn init_board()   -> Result<Device, ()>   {
             Parity::EXCLUDED,
             Baudrate::BAUD115200,
         );
-        /*
-        board_gpiote.channel0()
-            .input_pin(&pins.p0_07.degrade().into_floating_input())
-            .hi_to_lo()
-            .enable_interrupt();
-        */
-
-
-        //let dma_uarte = DmaCanBuffor::new(4, 4);
  
         let board_dma = DmaBuffor::new();
-        
-        //unsafe {dma_uarte.TxBlock.write([0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31]);}
-        //unsafe { *dma_can.tx_block = [0x0A, 0x31, 0x32, 0x33]; } //, 0x34, 0x35, 0x36, 0x37]};
 
         unsafe {board_dma.ptr.uarte_tx.write([0x0A, 0x31, 0x32, 0x33]); }
-
 
         // ********** NFCT configuration Configuration **********
         let board_nfct = Nfct::new(periph.NFCT);
@@ -180,44 +167,19 @@ pub struct Led  {
 impl Led    {
     /// Turns on LED 
     pub fn on(&mut self)    {
-        
-        /*defmt::trace!(
-            "setting P{}.{} low (LED on)",
-
-            if self.inner.port() == Port::Port1 {
-                '1'
-            }   else {
-                '0'
-            },
-            self.inner.pin()
-        );*/
-        
-        
         let _ = self.inner.set_low();
     }
 
     /// Turns off LED 
-    pub fn off(&mut self)    {
-        
-        /*defmt::trace!(
-            "setting P{}.{} low (LED on)",
-
-            if self.inner.port() == Port::Port1 {
-                '1'
-            }   else {
-                '0'
-            },
-            self.inner.pin()
-        );*/
-        
+    pub fn off(&mut self)    {    
         let _ = self.inner.set_high();
     }
 
     pub fn toggle(&mut self)    {
         if self.is_on() {
-            self.off();
+            let _ = self.off();
         } else {
-            self.on();
+            let _ = self.on();
         }
     }
 
