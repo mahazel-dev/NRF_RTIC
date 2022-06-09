@@ -45,7 +45,7 @@ where
         self.start_receive(rx_buffor, rx_len)?;
 
         // Timer handler
-        let cycles: u32= 3000000;
+        let cycles: u32= 10000000;
         timer.start(cycles);
 
         // Finalizing event, Timer or end of receive
