@@ -5,6 +5,7 @@ mod lib_gpiote;
 mod lib_nfc;
 mod lib_uarte;
 
+use hal::pac::{TIMER1, TIMER2, TIMER3};
 pub use lib_dma::*;
 pub use lib_gpiote::*;
 pub use lib_nfc::*;
@@ -61,7 +62,7 @@ pub fn init_board()   -> Result<Device, ()>   {
  
 
         // Blocker for button - to delete, LEARN Monotonics
-        let blocker = hal::Timer::one_shot(periph.TIMER0);
+        //let blocker = hal::Timer::one_shot(periph.TIMER0);
 
         // ********** UARTE configuration Configuration **********
         // UARTE unwrap and basic configure
@@ -77,14 +78,20 @@ pub fn init_board()   -> Result<Device, ()>   {
             Parity::EXCLUDED,
             Baudrate::BAUD115200,
         );
- 
-        let board_dma = DmaBuffor::new();
 
+         // ********** New DMA BUFFOR ****************
+        let board_dma = DmaBuffor::new();
         unsafe {board_dma.ptr.uarte_tx.write([0x0A, 0x31, 0x32, 0x33]); }
 
         // ********** NFCT configuration Configuration **********
         let board_nfct = Nfct::new(periph.NFCT);
 
+        let board_timers = Timers {
+            tim0: Timer::new(periph.TIMER0),
+            tim1: None,
+            tim2: None,
+            tim3: None,
+        };
 
         // **********!! Return Result<Device, Err) !!**********    
         Ok(Device {
@@ -102,9 +109,6 @@ pub fn init_board()   -> Result<Device, ()>   {
                 _4: Button { inner: button_4 },
             },
 
-            blocking_timer: ButtonBlocker   {
-                inner: blocker,
-            },
 
             board_gpiote: board_gpiote,
 
@@ -113,6 +117,8 @@ pub fn init_board()   -> Result<Device, ()>   {
             board_uarte: board_uarte,
 
             board_dma: board_dma,
+
+            board_timers: board_timers,
 
         })
         
@@ -124,13 +130,13 @@ pub fn init_board()   -> Result<Device, ()>   {
 /* */
 
 
-pub struct Device   {
+pub struct Device {
     /// Add LEDs to my board
     pub leds: Leds,
     /// Add Buttons to my board
     pub buttons: Buttons,
     /// Add timer for general delay
-    pub blocking_timer: ButtonBlocker,
+    //pub blocking_timer: ButtonBlocker,
     // Add GPIOTE feature
     pub board_gpiote: Gpiote,
     // Add Uart feature
@@ -141,6 +147,8 @@ pub struct Device   {
     pub board_nfct: Nfct,
     // DMA Handler
     pub board_dma: DmaBuffor,
+    // Timers Handler
+    pub board_timers: Timers,
 
 }
 
@@ -148,6 +156,13 @@ pub struct Device   {
 use embedded_hal::digital::v2::
     {OutputPin as _, InputPin as _,
         StatefulOutputPin};
+
+pub struct Timers  {
+    pub tim0: Timer<TIMER0>,
+    tim1: Option<TIMER1>,
+    tim2: Option<TIMER2>,
+    tim3: Option<TIMER3>,
+}
 
 pub struct Leds {
     // LED1: pin P0.13, green

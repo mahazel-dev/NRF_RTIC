@@ -30,6 +30,8 @@ mod app {
         gpiote: Gpiote,
         #[lock_free]
         uarte: Uarte<UARTE0>,
+        #[lock_free]
+        timers: Timers,
     }
 
     #[init]
@@ -55,7 +57,8 @@ mod app {
             SharedResources {
                 gpiote: my_board.board_gpiote,
                 leds: leds,
-                uarte: uarte
+                uarte: uarte,
+                timers: my_board.board_timers,
             },
             LocalResources  {
                 system_on,
@@ -106,7 +109,7 @@ mod app {
         // Add condition for each port event
         if buttons._1.is_pushed() { leds._1.toggle();
             defmt::info!("button1 pushed");
-            cx.shared.uarte.transmit(0x2000_0000, 4).unwrap();
+            //cx.shared.uarte.transmit(0x2000_0000, 4).unwrap();
         } else if buttons._2.is_pushed() { leds._2.toggle();
             defmt::info!("button2 pushed");
         } else if buttons._3.is_pushed() { leds._3.toggle();
@@ -120,11 +123,13 @@ mod app {
 
 
     // Interrupt handler for Uarte reception
-    #[task(binds = UARTE0_UART0, shared = [uarte])]
+    #[task(binds = UARTE0_UART0, shared = [uarte, timers])]
     fn uarte_receive(cx: uarte_receive::Context)    {
         if cx.shared.uarte.is_cts() {
             defmt::debug!("Entered cts interrupt");
-            cx.shared.uarte.receive(UARTE_RX_BUF_DEF, UARTE_RX_BUF_MAXLEN).unwrap();
+            cx.shared.uarte.receive(UARTE_RX_BUF_DEF, UARTE_RX_BUF_MAXLEN, 
+                &mut cx.shared.timers.tim0
+            ).unwrap();
             cx.shared.uarte.clear_cts_event();
             defmt::debug!("Left interrupt");
         }

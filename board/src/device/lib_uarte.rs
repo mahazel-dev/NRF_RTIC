@@ -1,5 +1,7 @@
 use crate::hal_main as hal;
 
+use embedded_hal::prelude::_embedded_hal_timer_CountDown;
+pub use hal::Timer;
 pub use hal::uarte::*;
 pub use hal::pac::{uarte0, UARTE0};
 
@@ -29,13 +31,42 @@ where
         self.0.events_endrx.read().events_endrx().bit_is_set()
     }
 
-
-    pub fn receive(&mut self, rx_buffor: u32, rx_len: u8) -> Result<(), Error> {
+    /// Write via UARTE.
+    ///
+    /// This method uses transmits all bytes in `tx_buffer`with timeout control
+    pub fn receive<I>(&mut self,
+        rx_buffor: u32, rx_len: u8,
+        timer: &mut Timer<I>) 
+        -> Result<(), Error> 
+    where
+        I: hal::timer::Instance
+        {
+        // Start function - set pointer to buffer, buffer length and start to read
         self.start_receive(rx_buffor, rx_len)?;
 
-        // Wait for transmission to end.
-        while self.0.events_endrx.read().bits() == 0 {}
+        // Timer handler
+        let cycles: u32= 3000000;
+        timer.start(cycles);
 
+        // Finalizing event, Timer or end of receive
+        let mut event_completed: bool = false;
+        let mut event_timeout: bool = false;
+
+
+        // Wait for transmission to end.
+        loop {
+            event_completed = self.0.events_endrx.read().events_endrx().bit_is_set();
+            event_timeout = timer.wait().is_ok();
+            if event_completed || event_timeout {
+                break;
+            }
+        }
+        
+        
+        //while self.0.events_endrx.read().bits() == 0 {}
+
+
+        // Reset everything and be ready for next message
         self.finalize_receive();
 
         /*
@@ -46,8 +77,8 @@ where
 
         Ok(())
     }
-/// Start a UARTE read transaction by setting the control
-/// values and triggering a read task.
+    /// Start a UARTE read transaction by setting the control
+    /// values and triggering a read task.
     fn start_receive(&mut self, rx_buffor: u32, rx_len: u8) -> Result<(), Error> {
         if rx_len == 0 {
             return Err(Error::RxBufferTooSmall);
@@ -74,6 +105,18 @@ where
 
     }
 
+    /// Finalize a UARTE read transaction by clearing the event.
+    pub fn finalize_receive(&mut self) {
+        // Reset the event, otherwise it will always read `1` from now on.
+        self.0.events_endrx.write(|w| w.events_endrx().clear_bit());
+    
+        // Conservative compiler fence to prevent optimizations that do not
+        // take in to account actions by DMA. The fence has been placed here,
+        // after all possible DMA actions have completed.
+        compiler_fence(SeqCst);
+    }
+
+
     /// Stop an unfinished UART read transaction and flush FIFO to DMA buffer.
     fn cancel_receive(&mut self) {
         // Stop reception.
@@ -94,16 +137,7 @@ where
         // The event flag itself is later reset by `finalize_read`.
     }
 
-    /// Finalize a UARTE read transaction by clearing the event.
-    pub fn finalize_receive(&mut self) {
-    // Reset the event, otherwise it will always read `1` from now on.
-    self.0.events_endrx.write(|w| w.events_endrx().clear_bit());
 
-    // Conservative compiler fence to prevent optimizations that do not
-    // take in to account actions by DMA. The fence has been placed here,
-    // after all possible DMA actions have completed.
-    compiler_fence(SeqCst);
-}
 
 
 
@@ -246,6 +280,18 @@ pub struct Pins {
     pub txd: Pin<Output<PushPull>>,
     pub cts: Option<Pin<Input<PullUp>>>,
     pub rts: Option<Pin<Output<PushPull>>>,
+}
+
+#[derive(Debug)]
+pub enum Error {
+    TxBufferTooSmall,
+    RxBufferTooSmall,
+    TxBufferTooLong,
+    RxBufferTooLong,
+    Transmit,
+    Receive,
+    Timeout(usize),
+    BufferNotInRAM,
 }
 
 
