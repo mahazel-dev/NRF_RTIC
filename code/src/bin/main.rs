@@ -6,6 +6,7 @@ use panic_probe as _;
 use defmt_rtt as _;
 
 
+
 #[app(device = board, peripherals = false, dispatchers = [SWI0_EGU0,
                                                         SWI1_EGU1])] 
 mod app {

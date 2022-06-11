@@ -1,4 +1,5 @@
-use crate::hal_main::pac::{ NFCT as NFC, nfct, nfct::*};
+use crate::hal_main as hal;
+use hal::pac::{ NFCT as NFC, nfct, nfct::*};
 
 pub struct Nfct(NFC);
 
