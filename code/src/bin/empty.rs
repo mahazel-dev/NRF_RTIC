@@ -19,6 +19,7 @@ mod app {
     struct SharedResources {
     }
 
+    
     #[init]
     fn init(_ctx: init::Context) 
     -> (SharedResources, LocalResources, init::Monotonics) {
