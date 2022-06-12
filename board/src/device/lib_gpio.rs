@@ -5,8 +5,6 @@ use embedded_hal::digital::v2::
     {OutputPin as _, InputPin as _,
         StatefulOutputPin};
 
-
-     
         
 pub struct Leds {
     // LED1: pin P0.13, green

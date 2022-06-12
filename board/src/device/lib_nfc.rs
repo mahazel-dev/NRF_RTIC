@@ -1,5 +1,5 @@
 use crate::hal_main as hal;
-use hal::pac::{ NFCT as NFC, nfct, nfct::*};
+use hal::pac::{ NFCT as NFC}; //, nfct, nfct::*};
 
 pub struct Nfct(NFC);
 
@@ -11,7 +11,7 @@ impl Nfct   {
         periph.inten.write(|p| unsafe { p.bits(2)});
 
         let u = Nfct(periph);
-
+        
         u
     }
 

@@ -2,7 +2,7 @@ use crate::hal_main as hal;
 
 use embedded_hal::prelude::_embedded_hal_timer_CountDown;
 pub use hal::Timer;
-pub use hal::uarte::*;
+pub use hal::uarte::{self, *};
 pub use hal::pac::{uarte0, UARTE0};
 
 use hal::prelude::OutputPin;
@@ -49,15 +49,15 @@ where
         timer.start(cycles);
 
         // Finalizing event, Timer or end of receive
-        let mut event_completed: bool = false;
-        let mut event_timeout: bool = false;
+        let mut _event_completed: bool = false;
+        let mut _event_timeout: bool = false;
 
 
         // Wait for transmission to end.
         loop {
-            event_completed = self.0.events_endrx.read().events_endrx().bit_is_set();
-            event_timeout = timer.wait().is_ok();
-            if event_completed || event_timeout {
+            _event_completed = self.0.events_endrx.read().events_endrx().bit_is_set();
+            _event_timeout = timer.wait().is_ok();
+            if _event_completed || _event_timeout {
                 break;
             }
         }
@@ -118,7 +118,7 @@ where
 
 
     /// Stop an unfinished UART read transaction and flush FIFO to DMA buffer.
-    fn cancel_receive(&mut self) {
+    fn _cancel_receive(&mut self) {
         // Stop reception.
         self.0.tasks_stoprx.write(|w| unsafe { w.bits(1) });
 
@@ -206,7 +206,7 @@ where
 
 
 
-    pub fn new(uarte: T, mut pins: Pins, parity: Parity, baudrate: Baudrate) -> Self {
+    pub fn new(uarte: T, mut pins: uarte::Pins, parity: Parity, baudrate: Baudrate) -> Self {
         // Is the UART already on? It might be if you had a bootloader
         if uarte.enable.read().bits() != 0 {
             uarte.tasks_stoptx.write(|w| unsafe { w.bits(1) });
@@ -274,13 +274,7 @@ where
 
 }
 
-pub use hal::gpio::{ Pin, Output, Input, Floating, PullUp, PushPull};
-pub struct Pins {
-    pub rxd: Pin<Input<Floating>>,
-    pub txd: Pin<Output<PushPull>>,
-    pub cts: Option<Pin<Input<PullUp>>>,
-    pub rts: Option<Pin<Output<PushPull>>>,
-}
+
 
 #[derive(Debug)]
 pub enum Error {

@@ -42,19 +42,20 @@ pub fn init_board()   -> Result<Device, ()>   {
         //defmt::debug!("Initializing the board's peripherals");
 
         // ********** GPIO Configuration ********** 
-        let pins = gpio::p0::Parts::new(periph.P0);
+        let pins_0 = gpio::p0::Parts::new(periph.P0);
+        let pins_1 = gpio::p1::Parts::new(periph.P1);
         
         // LED config
-        let led_1 = pins.p0_13.degrade().into_push_pull_output(gpio::Level::High);
-        let led_2 = pins.p0_14.degrade().into_push_pull_output(gpio::Level::High);
-        let led_3 = pins.p0_15.degrade().into_push_pull_output(gpio::Level::High);
-        let led_4 = pins.p0_16.degrade().into_push_pull_output(gpio::Level::High);
+        let led_1 = pins_0.p0_13.degrade().into_push_pull_output(gpio::Level::High);
+        let led_2 = pins_0.p0_14.degrade().into_push_pull_output(gpio::Level::High);
+        let led_3 = pins_0.p0_15.degrade().into_push_pull_output(gpio::Level::High);
+        let led_4 = pins_0.p0_16.degrade().into_push_pull_output(gpio::Level::High);
         
         // General buttons config
-        let button_1 = pins.p0_11.degrade().into_pullup_input();
-        let button_2 = pins.p0_12.degrade().into_pullup_input();
-        let button_3 = pins.p0_24.degrade().into_pullup_input();
-        let button_4 = pins.p0_25.degrade().into_pullup_input();
+        let button_1 = pins_0.p0_11.degrade().into_pullup_input();
+        let button_2 = pins_0.p0_12.degrade().into_pullup_input();
+        let button_3 = pins_0.p0_24.degrade().into_pullup_input();
+        let button_4 = pins_0.p0_25.degrade().into_pullup_input();
         
         // ********** GPIOTE Configuration **********
         let board_gpiote = Gpiote::new(periph.GPIOTE);
@@ -65,25 +66,35 @@ pub fn init_board()   -> Result<Device, ()>   {
         board_gpiote.port().input_pin(&button_4).low();
         board_gpiote.port().enable_interrupt();
 
- 
+
+        board_gpiote.channel0().input_pin(&pins_0.p0_07.degrade().into_floating_input()).hi_to_lo();
 
         // Blocker for button - to delete, LEARN Monotonics
         //let blocker = hal::Timer::one_shot(periph.TIMER0);
 
-        // ********** UARTE configuration Configuration **********
+        // ********** UARTE configuration **********
         // UARTE unwrap and basic configure
         let board_uarte = Uarte::new(periph.UARTE0,
-            Pins {
-                rxd: pins.p0_08.degrade().into_floating_input(),
-                txd: pins.p0_06.degrade().into_push_pull_output(gpio::Level::High),
-                cts: Some(pins.p0_07.degrade().into_pullup_input()),
-                //cts: None,
-                //rts: None,
-                rts: Some(pins.p0_05.degrade().into_push_pull_output(gpio::Level::High)),
+            uarte::Pins {
+                rxd: pins_0.p0_08.degrade().into_floating_input(),
+                txd: pins_0.p0_06.degrade().into_push_pull_output(Level::High),
+                cts: None, //Some(pins_0.p0_07.degrade().into_floating_input()),
+                rts: None, //Some(pins_0.p0_05.degrade().into_push_pull_output(Level::High)),
             },
             Parity::EXCLUDED,
             Baudrate::BAUD115200,
         );
+
+        
+        // ********** I2C Master configuration **********
+        let _board_i2c = Twim::new(periph.TWIM0,
+            twim::Pins {
+                scl: pins_1.p1_01.degrade().into_floating_input(),
+                sda: pins_1.p1_02.degrade().into_floating_input(),
+            },
+            twim::Frequency::K400,
+            );
+
 
          // ********** New DMA BUFFOR ****************
         let board_dma = DmaBuffor::new();
@@ -94,9 +105,9 @@ pub fn init_board()   -> Result<Device, ()>   {
 
         let board_timers = Timers {
             tim0: Timer::new(periph.TIMER0),
-            tim1: None,
-            tim2: None,
-            tim3: None,
+            _tim1: None,
+            _tim2: None,
+            _tim3: None,
         };
 
         // **********!! Return Result<Device, Err) !!**********    
@@ -161,9 +172,9 @@ pub struct Device {
 
 pub struct Timers  {
     pub tim0: Timer<TIMER0>,
-    tim1: Option<TIMER1>,
-    tim2: Option<TIMER2>,
-    tim3: Option<TIMER3>,
+    _tim1: Option<TIMER1>,
+    _tim2: Option<TIMER2>,
+    _tim3: Option<TIMER3>,
 }
 
 
